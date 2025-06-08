@@ -1,0 +1,19 @@
+[project]
+name = "reviewtalk-backend"
+version = "0.1.0"
+description = "다나와 상품 리뷰를 AI가 분석해서 답변하는 챗봇 API"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.12",
+    "pydantic>=2.11.5",
+    "pydantic-settings>=2.9.1",
+    "python-dotenv>=1.1.0",
+    "uvicorn[standard]>=0.34.3",
+]
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.uv.scripts]
+dev = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
