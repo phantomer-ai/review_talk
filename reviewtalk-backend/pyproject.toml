@@ -5,10 +5,16 @@ description = "다나와 상품 리뷰를 AI가 분석해서 답변하는 챗봇
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.13.4",
+    "chromadb>=0.6.3",
     "fastapi>=0.115.12",
+    "openai>=1.84.0",
+    "playwright>=1.52.0",
     "pydantic>=2.11.5",
     "pydantic-settings>=2.9.1",
     "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+    "sentence-transformers>=4.1.0",
     "uvicorn[standard]>=0.34.3",
 ]
 

@@ -39,7 +39,7 @@ dependencies:
   dio: ^5.4.0
   
   # State management
-  provider: ^6.1.1
+  provider: ^6.1.5
   
   # Dependency injection
   get_it: ^7.6.4
@@ -52,6 +52,7 @@ dependencies:
   
   # Object comparison
   equatable: ^2.0.5
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:
