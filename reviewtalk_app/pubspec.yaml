@@ -53,6 +53,9 @@ dependencies:
   # Object comparison
   equatable: ^2.0.5
   http: ^1.4.0
+  
+  # Functional programming
+  dartz: ^0.10.1
 
 dev_dependencies:
   flutter_test:
