@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict, Any
 from urllib.parse import urlparse
+from loguru import logger
 
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
 from app.models.schemas import CrawlRequest, CrawlResponse
@@ -57,9 +58,9 @@ class CrawlService:
                         reviews=crawl_response.reviews,
                         product_url=product_url
                     )
-                    print(f"🤖 AI 저장 결과: {ai_result['message']}")
+                    logger.info(f"🤖 AI 저장 결과: {ai_result['message']}")
                 except Exception as ai_error:
-                    print(f"⚠️ AI 저장 실패 (크롤링은 성공): {ai_error}")
+                    logger.warning(f"⚠️ AI 저장 실패 (크롤링은 성공): {ai_error}")
             
             return crawl_response
             

@@ -10,6 +10,7 @@ from chromadb import EmbeddingFunction
 from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 from app.models.schemas import ReviewData
+from loguru import logger
 
 
 class CustomEmbeddingFunction(EmbeddingFunction):
@@ -94,10 +95,10 @@ class VectorStore:
                 ids=ids
             )
             
-            print(f"✅ {len(reviews)}개 리뷰가 벡터 저장소에 추가되었습니다.")
+            logger.info(f"✅ {len(reviews)}개 리뷰가 벡터 저장소에 추가되었습니다.")
             
         except Exception as e:
-            print(f"❌ 벡터 저장소 추가 오류: {e}")
+            logger.error(f"❌ 벡터 저장소 추가 오류: {e}")
             raise
     
     def search_similar_reviews(
@@ -134,7 +135,7 @@ class VectorStore:
             return search_results
             
         except Exception as e:
-            print(f"❌ 벡터 검색 오류: {e}")
+            logger.error(f"❌ 벡터 검색 오류: {e}")
             return []
     
     def get_collection_stats(self) -> Dict[str, Any]:
@@ -146,16 +147,16 @@ class VectorStore:
                 "collection_name": self.collection.name
             }
         except Exception as e:
-            print(f"❌ 통계 조회 오류: {e}")
+            logger.error(f"❌ 통계 조회 오류: {e}")
             return {"total_reviews": 0, "collection_name": "unknown"}
     
     def delete_collection(self) -> None:
         """컬렉션 삭제 (테스트용)"""
         try:
             self.client.delete_collection(name="product_reviews")
-            print("✅ 컬렉션이 삭제되었습니다.")
+            logger.info("✅ 컬렉션이 삭제되었습니다.")
         except Exception as e:
-            print(f"❌ 컬렉션 삭제 오류: {e}")
+            logger.error(f"❌ 컬렉션 삭제 오류: {e}")
 
 
 # 전역 벡터 저장소 인스턴스 - 지연 초기화

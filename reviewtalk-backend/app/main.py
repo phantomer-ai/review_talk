@@ -5,7 +5,29 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.routes import crawl, chat
+from loguru import logger
+import os
+import logging
 
+# logs 디렉터리 생성
+os.makedirs("logs", exist_ok=True)
+
+# 로그 파일로 저장 (10MB 단위로 파일 분할, 7일간 보관)
+logger.add(
+    "logs/app.log",
+    rotation="10 MB",
+    retention="7 days",
+    level="INFO",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message} | {exception}",
+    encoding="utf-8"
+)
+
+class InterceptHandler(logging.Handler):
+    def emit(self, record):
+        logger_opt = logger.opt(depth=6, exception=record.exc_info)
+        logger_opt.log(record.levelname, record.getMessage())
+
+logging.basicConfig(handlers=[InterceptHandler()], level=0)
 
 def create_app() -> FastAPI:
     """FastAPI 애플리케이션 생성 및 설정"""

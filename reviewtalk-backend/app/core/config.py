@@ -19,10 +19,10 @@ class Settings(BaseSettings):
     port: int = 8000
     
     # CORS 설정
-    cors_origins: List[str] = ["*"]
+    cors_origins: List[str] = ["http://localhost:3000","http://127.0.0.1:3000"]
     
     # 데이터베이스 설정
-    database_url: str = "sqlite:///./reviewtalk.db"
+    database_url: str = "sqlite:///./data/reviewtalk.db"
     
     # OpenAI API 설정
     openai_api_key: str = ""
@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  
 
 
 # 전역 설정 인스턴스

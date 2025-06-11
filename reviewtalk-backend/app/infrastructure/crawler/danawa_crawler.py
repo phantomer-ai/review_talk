@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse, parse_qs
 
 from playwright.async_api import async_playwright, Page, Browser
+from loguru import logger
 
 from app.models.schemas import ReviewData
 
@@ -58,7 +59,7 @@ class DanawaCrawler:
             if self.playwright:
                 await self.playwright.stop()
         except Exception as e:
-            print(f"브라우저 종료 오류: {e}")
+            logger.error(f"브라우저 종료 오류: {e}")
     
     def extract_product_code(self, url: str) -> Optional[str]:
         """다나와 URL에서 상품 코드를 추출"""
@@ -90,12 +91,12 @@ class DanawaCrawler:
         reviews = []
 
         try:
-            print(f"🚀 모바일 상품 페이지 접근: {product_url}")
+            logger.info(f"🚀 모바일 상품 페이지 접근: {product_url}")
             
             # 모바일 상품 페이지로 이동
             await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=60000)
             await asyncio.sleep(3)
-            print("✅ 모바일 상품 페이지 로드 완료")
+            logger.info("✅ 모바일 상품 페이지 로드 완료")
             
             # 페이지 스크롤하여 콘텐츠 로드
             await self._scroll_to_load_content()
@@ -110,27 +111,27 @@ class DanawaCrawler:
                 # 리뷰 데이터 추출
                 reviews = await self._extract_mobile_reviews(max_reviews)
             
-            print(f"🎉 총 {len(reviews)}개의 리뷰를 수집했습니다!")
+            logger.info(f"🎉 총 {len(reviews)}개의 리뷰를 수집했습니다!")
 
         except Exception as e:
-            print(f"❌ 모바일 리뷰 크롤링 오류: {e}")
+            logger.error(f"❌ 모바일 리뷰 크롤링 오류: {e}")
 
         return reviews
     
     async def _scroll_to_load_content(self):
         """스크롤하여 더 많은 콘텐츠 로드"""
         try:
-            print("📜 페이지 스크롤 중...")
+            logger.info("📜 페이지 스크롤 중...")
             for i in range(3):
                 await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 await asyncio.sleep(2)
-            print("✅ 스크롤 완료")
+            logger.info("✅ 스크롤 완료")
         except Exception as e:
-            print(f"❌ 스크롤 오류: {e}")
+            logger.error(f"❌ 스크롤 오류: {e}")
     
     async def _navigate_to_mobile_reviews(self) -> bool:
         """모바일 사이트에서 리뷰 섹션으로 이동"""
-        print("🔍 모바일 리뷰 섹션 찾는 중...")
+        logger.info("🔍 모바일 리뷰 섹션 찾는 중...")
         
         # 사용자가 제공한 정확한 리뷰 버튼 셀렉터
         review_button_selector = "#productBlog-starsButton > div.text__review > span.text__number"
@@ -139,21 +140,21 @@ class DanawaCrawler:
             # 리뷰 버튼 클릭
             review_button = await self.page.query_selector(review_button_selector)
             if review_button:
-                print(f"✅ 리뷰 버튼 발견!")
+                logger.info(f"✅ 리뷰 버튼 발견!")
                 await review_button.click()
                 await asyncio.sleep(3)
-                print("✅ 리뷰 섹션으로 이동 완료")
+                logger.info("✅ 리뷰 섹션으로 이동 완료")
                 return True
             else:
-                print("❌ 리뷰 버튼을 찾을 수 없습니다.")
+                logger.error("❌ 리뷰 버튼을 찾을 수 없습니다.")
                 return False
         except Exception as e:
-            print(f"❌ 리뷰 탭 클릭 실패: {e}")
+            logger.error(f"❌ 리뷰 탭 클릭 실패: {e}")
             return False
     
     async def _click_more_reviews_if_needed(self):
         """리뷰 더 보기 버튼이 있으면 클릭"""
-        print("🔍 리뷰 더 보기 버튼 찾는 중...")
+        logger.info("🔍 리뷰 더 보기 버튼 찾는 중...")
         
         # 사용자가 제공한 정확한 펼쳐보기 셀렉터
         more_button_selector = "#productBlog-opinion-mall-button-viewMore > span"
@@ -161,27 +162,27 @@ class DanawaCrawler:
         try:
             more_button = await self.page.query_selector(more_button_selector)
             if more_button:
-                print(f"✅ 더보기 버튼 발견!")
+                logger.info(f"✅ 더보기 버튼 발견!")
                 await more_button.click()
                 await asyncio.sleep(3)
-                print("✅ 더 많은 리뷰 로드 완료")
+                logger.info("✅ 더 많은 리뷰 로드 완료")
         except Exception as e:
-            print(f"❌ 더보기 버튼 클릭 실패: {e}")
+            logger.error(f"❌ 더보기 버튼 클릭 실패: {e}")
     
     async def _extract_mobile_reviews(self, max_reviews: int) -> List[ReviewData]:
         """모바일 페이지에서 리뷰 데이터 추출"""
         reviews = []
         
-        print("🔍 모바일 리뷰 데이터 추출 중...")
+        logger.info("🔍 모바일 리뷰 데이터 추출 중...")
         
         try:
             # 리뷰 컨테이너들 찾기 (동적 ID 패턴)
             # 사용자 예시: #productBlog-opinion-mall-list-listItem-9123372001990022352 > div
             review_containers = await self.page.query_selector_all('[id*="productBlog-opinion-mall-list-listItem-"] > div')
-            print(f"📝 발견된 리뷰 컨테이너: {len(review_containers)}개")
+            logger.info(f"📝 발견된 리뷰 컨테이너: {len(review_containers)}개")
             
             if not review_containers:
-                print("❌ 리뷰 컨테이너를 찾을 수 없습니다.")
+                logger.error("❌ 리뷰 컨테이너를 찾을 수 없습니다.")
                 return reviews
             
             review_count = 0
@@ -237,16 +238,16 @@ class DanawaCrawler:
                             )
                             reviews.append(review_data)
                             review_count += 1
-                            print(f"📝 리뷰 {review_count}: {review_text[:50]}..." + (f" (★{rating})" if rating > 0 else ""))
+                            logger.info(f"📝 리뷰 {review_count}: {review_text[:50]}..." + (f" (★{rating})" if rating > 0 else ""))
                     
                 except Exception as e:
-                    print(f"❌ 리뷰 {i+1} 추출 오류: {e}")
+                    logger.error(f"❌ 리뷰 {i+1} 추출 오류: {e}")
                     continue
             
-            print(f"🎉 총 {len(reviews)}개의 모바일 리뷰 추출 완료!")
+            logger.info(f"🎉 총 {len(reviews)}개의 모바일 리뷰 추출 완료!")
             
         except Exception as e:
-            print(f"❌ 모바일 리뷰 추출 중 오류: {e}")
+            logger.error(f"❌ 모바일 리뷰 추출 중 오류: {e}")
         
         return reviews
 
@@ -270,7 +271,7 @@ async def crawl_danawa_reviews(product_url: str, max_reviews: int = 100) -> Dict
             }
             
         except Exception as e:
-            print(f"크롤링 전체 오류: {e}")
+            logger.error(f"크롤링 전체 오류: {e}")
             return {
                 "success": False,
                 "product_id": "error", 

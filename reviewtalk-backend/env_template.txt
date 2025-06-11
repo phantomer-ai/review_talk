@@ -14,7 +14,7 @@ PORT=8000
 CORS_ORIGINS=*
 
 # 데이터베이스 설정
-DATABASE_URL=sqlite:///./reviewtalk.db
+DATABASE_URL=sqlite:///./data/reviewtalk.db
 
 # OpenAI API 설정 (Phase 2에서 필요)
 OPENAI_API_KEY=sk-your-openai-api-key-here
