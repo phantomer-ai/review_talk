@@ -17,7 +17,7 @@ CORS_ORIGINS=["*"]
 DATABASE_URL=sqlite:///./data/reviewtalk.db
 
 # OpenAI API 설정 (Phase 2에서 필요)
-OPENAI_API_KEY=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
+OPENAI_API_KEY=
 
 # 크롤링 설정
 CRAWLING_TIMEOUT=30
