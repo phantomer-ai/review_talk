@@ -11,13 +11,13 @@ HOST=0.0.0.0
 PORT=8000
 
 # CORS 설정 (Flutter 앱에서 접근 허용)
-CORS_ORIGINS=*
+CORS_ORIGINS=["*"]
 
 # 데이터베이스 설정
 DATABASE_URL=sqlite:///./data/reviewtalk.db
 
 # OpenAI API 설정 (Phase 2에서 필요)
-OPENAI_API_KEY=sk-your-openai-api-key-here
+OPENAI_API_KEY=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
 
 # 크롤링 설정
 CRAWLING_TIMEOUT=30
@@ -25,6 +25,3 @@ MAX_REVIEWS_PER_PRODUCT=50
 
 # ChromaDB 벡터 데이터베이스 설정 (Phase 2에서 필요)
 CHROMA_DB_PATH=./data/chroma_db
-
-# 개발 환경 설정
-PYTHONPATH=. 

@@ -8,7 +8,7 @@ import '../widgets/chat_input_widget.dart';
 import '../widgets/chat/suggested_questions.dart';
 import '../widgets/common/error_widget.dart';
 
-/// AI 채팅 스크린
+/// AI 채팅 스크린 - 새로운 깔끔한 디자인
 class ChatScreen extends StatefulWidget {
   final String productId;
   final String? productName;
@@ -69,7 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
           return Column(
             children: [
-              // 상품 정보 표시
+              // 상품 정보 표시 (간소화)
               if (viewModel.productName != null) _buildProductHeader(viewModel),
 
               // 채팅 메시지 영역
@@ -111,48 +111,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(AppStrings.chatTitle),
-          if (widget.productName != null)
-            Text(
-              widget.productName!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.onPrimary.withOpacity(0.8),
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
+      title: Text(
+        'chat',
+        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          color: AppColors.onPrimary,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.onPrimary,
       elevation: 0,
+      centerTitle: false,
       actions: [
         Consumer<ChatViewModel>(
           builder: (context, viewModel, child) {
-            return PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                switch (value) {
-                  case 'clear':
-                    _showClearChatDialog(context, viewModel);
-                    break;
-                }
+            return IconButton(
+              icon: const Icon(Icons.more_horiz),
+              onPressed: () {
+                _showClearChatDialog(context, viewModel);
               },
-              itemBuilder:
-                  (context) => [
-                    PopupMenuItem<String>(
-                      value: 'clear',
-                      child: Row(
-                        children: const [
-                          Icon(Icons.delete_outline, color: AppColors.error),
-                          SizedBox(width: 8),
-                          Text(AppStrings.chatClearTitle),
-                        ],
-                      ),
-                    ),
-                  ],
             );
           },
         ),
@@ -163,50 +140,36 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildProductHeader(ChatViewModel viewModel) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: AppColors.primaryContainer,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
         border: Border(
-          bottom: BorderSide(color: AppColors.outline, width: 0.5),
+          bottom: BorderSide(
+            color: AppColors.outline.withOpacity(0.2),
+            width: 1,
+          ),
         ),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 8,
+            height: 8,
             decoration: const BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.shopping_bag,
-              color: AppColors.onPrimary,
-              size: 20,
-            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  viewModel.productName!,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onPrimaryContainer,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '리뷰 기반 AI 분석 상담',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.onPrimaryContainer.withOpacity(0.7),
-                  ),
-                ),
-              ],
+            child: Text(
+              viewModel.productName!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -217,35 +180,27 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildWelcomeMessage() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.smart_toy,
-                size: 40,
-                color: AppColors.primary,
-              ),
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 64,
+              color: AppColors.primary.withOpacity(0.3),
             ),
             const SizedBox(height: 24),
             Text(
-              AppStrings.chatWelcomeTitle,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+              '안녕하세요! 👋',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: AppColors.onBackground,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              AppStrings.chatWelcomeMessage,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              '상품에 대해 궁금한 것을 물어보세요.\n리뷰를 바탕으로 답변해드릴게요!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
@@ -257,9 +212,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessageList(ChatViewModel viewModel) {
+    // 메시지 변화 감지 시 스크롤
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       itemCount: viewModel.messages.length,
       itemBuilder: (context, index) {
         final message = viewModel.messages[index];
@@ -273,20 +231,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildChatInput(ChatViewModel viewModel) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.outline, width: 0.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.outline.withOpacity(0.2), width: 1),
+        ),
       ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ChatInputWidget(
-            onSendMessage: (message) {
-              viewModel.sendMessage(message);
-              // 메시지 전송 후 스크롤을 맨 아래로
-              Future.delayed(const Duration(milliseconds: 300), () {
-                _scrollToBottom();
-              });
+            onSendMessage: (message) async {
+              await viewModel.sendMessage(message);
+              _scrollToBottom();
             },
             isLoading: viewModel.isLoading,
           ),
@@ -300,27 +257,22 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text(AppStrings.chatClearTitle),
-            content: const Text(AppStrings.chatClearMessage),
+            title: const Text('채팅 기록 삭제'),
+            content: const Text('모든 채팅 기록을 삭제하시겠습니까?'),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(AppStrings.cancel),
+                child: const Text('취소'),
               ),
               TextButton(
                 onPressed: () {
                   viewModel.clearChat();
                   Navigator.pop(context);
-                  SuccessSnackBar.show(
-                    context: context,
-                    message: '채팅 기록이 삭제되었습니다',
-                  );
                 },
-                style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                child: const Text(AppStrings.delete),
+                child: Text('삭제', style: TextStyle(color: AppColors.error)),
               ),
             ],
           ),

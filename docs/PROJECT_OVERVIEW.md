@@ -38,7 +38,7 @@
   - Sentence-Transformers (임베딩)
 - **Crawling**: 
   - Playwright (메인)
-  - BeautifulSoup4 (파싱)
+  
 - **Database**: 
   - SQLite (개발 시작용)
   - PostgreSQL (확장시 - Railway 제공)

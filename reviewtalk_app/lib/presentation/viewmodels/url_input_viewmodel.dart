@@ -21,8 +21,8 @@ class UrlInputViewModel extends BaseViewModel {
   String _currentUrl = '';
   String get currentUrl => _currentUrl;
 
-  // 최대 리뷰 수
-  int _maxReviews = 50;
+  // 최대 리뷰 수 (백엔드 제한: 100개)
+  int _maxReviews = 1000;
   int get maxReviews => _maxReviews;
 
   // 최근 검색 기록
@@ -46,9 +46,9 @@ class UrlInputViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  /// 최대 리뷰 수 설정
+  /// 최대 리뷰 수 설정 (백엔드 제한: 최대 100개)
   void setMaxReviews(int count) {
-    if (count > 0 && count <= 200) {
+    if (count > 0 && count <= 1000) {
       _maxReviews = count;
       notifyListeners();
     }

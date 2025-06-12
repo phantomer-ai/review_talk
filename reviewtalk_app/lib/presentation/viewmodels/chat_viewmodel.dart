@@ -34,7 +34,6 @@ class ChatViewModel extends BaseViewModel {
     '구매를 추천하시나요?',
     '배송이나 포장은 어떤가요?',
     'A/S나 품질은 어떤가요?',
-    '실제 사용해보신 분들 후기는?',
   ];
 
   List<String> get suggestedQuestions => _suggestedQuestions;

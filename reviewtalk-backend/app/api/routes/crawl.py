@@ -19,7 +19,7 @@ async def crawl_product_reviews(
     다나와 상품 리뷰 크롤링
     
     - **product_url**: 다나와 상품 URL (예: https://prod.danawa.com/info/?pcode=123456)
-    - **max_reviews**: 수집할 최대 리뷰 수 (1-100, 기본값: 20)
+    - **max_reviews**: 수집할 최대 리뷰 수 (1-1000, 기본값: 20)
     
     실제 다나와 사이트에서 리뷰를 크롤링하여 구조화된 데이터로 반환합니다.
     """

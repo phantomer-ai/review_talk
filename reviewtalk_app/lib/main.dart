@@ -5,7 +5,7 @@ import 'core/constants/app_strings.dart';
 import 'injection_container.dart' as di;
 import 'presentation/viewmodels/chat_viewmodel.dart';
 import 'presentation/viewmodels/url_input_viewmodel.dart';
-import 'presentation/views/screens/url_input_screen.dart';
+import 'presentation/views/screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +26,7 @@ class ReviewTalkApp extends StatelessWidget {
       child: MaterialApp(
         title: AppStrings.appName,
         theme: _buildTheme(),
-        home: const UrlInputScreen(),
+        home: const MainScreen(),
         debugShowCheckedModeBanner: false,
       ),
     );

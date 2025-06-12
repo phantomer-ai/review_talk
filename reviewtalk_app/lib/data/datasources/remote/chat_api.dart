@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/error/exceptions.dart';
@@ -22,6 +23,9 @@ class ChatApiDataSourceImpl implements ChatApiDataSource {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiConstants.chat,
         data: request.toJson(),
+        options: Options(
+          receiveTimeout: const Duration(seconds: 120), // AI 응답 생성을 위한 긴 타임아웃
+        ),
       );
 
       print('[ChatApi] 응답 상태: ${response.statusCode}');
