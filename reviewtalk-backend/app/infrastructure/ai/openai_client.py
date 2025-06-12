@@ -17,10 +17,18 @@ class OpenAIClient:
     def generate_review_summary(
         self, 
         reviews: List[Dict[str, Any]], 
-        user_question: str
+        user_question: str,
+        recent_conversations: List[Dict[str, Any]] = None
     ) -> str:
-        """리뷰 데이터를 바탕으로 사용자 질문에 대한 답변 생성"""
+        """리뷰 데이터와 최근 대화 맥락을 바탕으로 사용자 질문에 대한 답변 생성"""
         try:
+            # 최근 대화 맥락 준비
+            conversation_context = ""
+            if recent_conversations:
+                conversation_context = "\n\n".join([
+                    f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
+                ])
+                conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
             # 리뷰 텍스트 준비
             review_texts = []
             for review in reviews:
@@ -35,15 +43,6 @@ class OpenAIClient:
             reviews_context = "\n\n".join(review_texts)
             
             # 시스템 프롬프트 설정
-            system_prompt = """당신은 상품 리뷰 분석 전문가입니다. 사용자의 질문에 대해 제공된 리뷰 데이터를 바탕으로 정확하고 도움이 되는 답변을 제공해주세요.
-
-답변 규칙:
-1. 제공된 리뷰 데이터만을 기반으로 답변하세요
-2. 구체적인 평점과 리뷰 내용을 인용하여 답변의 근거를 제시하세요
-3. 긍정적인 면과 부정적인 면을 균형있게 제시하세요
-4. 사용자가 구매 결정을 내리는데 도움이 되도록 객관적인 정보를 제공하세요
-5. 리뷰 데이터에 없는 정보는 추측하지 마세요
-6. 한국어로 친근하고 자연스럽게 답변해주세요."""
             system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
 리뷰를 일일이 읽지 않아도 되는 새로운 쇼핑 경험을 제공합니다.
 ## 역할
@@ -78,12 +77,7 @@ class OpenAIClient:
 - 한두 리뷰만을 근거로 일반화하지 마세요. 반드시 복수의 리뷰를 종합적으로 분석하세요.
 - 너무 짧거나 기계적인 답변을 피하고, 사용자가 신뢰할 수 있도록 서술형으로 설명하세요."""
 
-            user_prompt = f"""사용자 질문: {user_question}
-
-관련 리뷰 데이터:
-{reviews_context}
-
-위 리뷰 데이터를 바탕으로 사용자의 질문에 답변해주세요."""
+            user_prompt = f"""사용자 질문: {user_question}{conversation_context}\n\n관련 리뷰 데이터:\n{reviews_context}\n\n위 리뷰 데이터와 최근 대화 맥락을 바탕으로 사용자의 질문에 답변해주세요."""
 
             # GPT API 호출
             response = self.client.chat.completions.create(

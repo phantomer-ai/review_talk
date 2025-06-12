@@ -5,7 +5,11 @@ from typing import List, Dict, Any
 from app.infrastructure.ai.vector_store import get_vector_store
 from app.infrastructure.ai.openai_client import get_openai_client
 from app.models.schemas import ReviewData
+from app.infrastructure.conversation_repository import ConversationRepository
+import asyncio
+from app.utils.cache import ConversationCache
 
+conversation_cache = ConversationCache(maxlen=30)
 
 class AIService:
     """AI 기반 리뷰 분석 서비스"""
@@ -14,6 +18,7 @@ class AIService:
         """AI 서비스 초기화"""
         self.vector_store = get_vector_store()
         self.openai_client = get_openai_client()
+        self.conversation_repository = ConversationRepository()
     
     def process_and_store_reviews(
         self, 
@@ -43,13 +48,44 @@ class AIService:
                 "total_reviews_in_db": 0
             }
     
-    def chat_with_reviews(
+    async def store_chat(
+        self,
+        product_id: str,
+        message: str,
+        chat_user_id: str,
+        related_review_ids: list[str] = None
+    ) -> int:
+        """
+        채팅 내용을 conversations 테이블에 저장 (비동기)
+        Args:
+            product_id (str): 제품 ID (product_url)
+            message (str): 채팅 메시지
+            chat_user_id (str): 사용자 ID 또는 AI ID
+            related_review_ids (list[str], optional): 관련 리뷰 ID 목록
+        Returns:
+            int: 저장된 row의 id (primary key)
+        """
+        loop = asyncio.get_running_loop()
+        try:
+            product_id_int = int(product_id) if product_id is not None else None
+        except Exception:
+            product_id_int = None
+        return await loop.run_in_executor(
+            None,
+            self.conversation_repository.store_chat,
+            product_id_int,
+            message,
+            chat_user_id,
+            related_review_ids
+        )
+    
+    async def chat_with_reviews(
         self, 
         user_question: str, 
         product_id: str = None, 
         n_results: int = 5
     ) -> Dict[str, Any]:
-        """사용자 질문에 대해 리뷰 기반 AI 응답 생성"""
+        """사용자 질문에 대해 리뷰 기반 AI 응답 생성 (비동기)"""
         try:
             # 관련 리뷰 검색
             similar_reviews = self.vector_store.search_similar_reviews(
@@ -65,13 +101,55 @@ class AIService:
                     "ai_response": "죄송합니다. 해당 질문과 관련된 리뷰 정보를 찾을 수 없습니다. 다른 질문을 시도해보세요.",
                     "source_reviews": []
                 }
-            
-            # AI 응답 생성
+            user_id = "temp_1234"
+            ai_id = "open_1234"
+            # 1. 최근 대화 30건 cache에서 조회, 없으면 db에서 조회 후 cache에 set
+            recent_convs = conversation_cache.get_recent_conversations(user_id, product_id)
+            if not recent_convs:
+                loop = asyncio.get_running_loop()
+                recent_convs = await loop.run_in_executor(
+                    None,
+                    self.conversation_repository.get_recent_conversations,
+                    user_id,
+                    product_id
+                )
+                if recent_convs:
+                    conversation_cache.set_conversations(user_id, product_id, recent_convs)
+            # 2. AI 응답 생성 (최근 대화 30건도 전달)
             ai_response = self.openai_client.generate_review_summary(
                 reviews=similar_reviews,
-                user_question=user_question
+                user_question=user_question,
+                recent_conversations=recent_convs
             )
-            
+            # 관련 리뷰 ID 추출
+            related_review_ids = [r["metadata"].get("review_id") for r in similar_reviews if r.get("metadata") and r["metadata"].get("review_id")]
+            # 3. cache에 add_conversation (비동기, Write-Behind) 및 DB 저장 (비동기)
+            user_msg = {
+                "message": user_question,
+                "chat_user_id": user_id,
+                "related_review_ids": related_review_ids
+            }
+            ai_msg = {
+                "message": ai_response,
+                "chat_user_id": ai_id,
+                "related_review_ids": related_review_ids
+            }
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, conversation_cache.add_conversation, user_id, product_id, user_msg)
+            await loop.run_in_executor(None, conversation_cache.add_conversation, user_id, product_id, ai_msg)
+            # DB 저장은 비동기로 (이미 await self.store_chat으로 구현)
+            await self.store_chat(
+                product_id=product_id,
+                message=user_question,
+                chat_user_id=user_id,
+                related_review_ids=related_review_ids
+            )
+            await self.store_chat(
+                product_id=product_id,
+                message=ai_response,
+                chat_user_id=ai_id,
+                related_review_ids=related_review_ids
+            )
             return {
                 "success": True,
                 "message": "AI 응답이 성공적으로 생성되었습니다.",
@@ -79,7 +157,6 @@ class AIService:
                 "source_reviews": similar_reviews,
                 "reviews_used": len(similar_reviews)
             }
-            
         except Exception as e:
             return {
                 "success": False,
