@@ -142,7 +142,9 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Consumer<UrlInputViewModel>(
         builder: (context, viewModel, child) {
           return Stack(
@@ -162,48 +164,49 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                   ],
                 ),
                 child: SafeArea(
-                  child: Column(
-                    children: [
-                      const Spacer(flex: 2),
-
-                      // 메인 타이틀 (Figma 위치)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 80),
-                        child: Text(
-                          'chat what you want',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'LibreBarcode128Text', // Figma 폰트
-                            fontSize: 40,
-                            letterSpacing: 0,
-                            fontWeight: FontWeight.normal,
-                            height: 1,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // URL 입력창을 최상단으로 이동
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 27,
+                            vertical: 24,
+                          ),
+                          child: _buildSearchInput(viewModel),
+                        ),
+                        const SizedBox(height: 8),
+                        // 메인 타이틀 (Figma 위치)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 80),
+                          child: Text(
+                            'chat what you want',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'LibreBarcode128Text', // Figma 폰트
+                              fontSize: 40,
+                              letterSpacing: 0,
+                              fontWeight: FontWeight.normal,
+                              height: 1,
+                            ),
                           ),
                         ),
-                      ),
-
-                      const SizedBox(height: 60),
-
-                      // 검색 입력창 (Figma 위치)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 27),
-                        child: _buildSearchInput(viewModel),
-                      ),
-
-                      const Spacer(flex: 3),
-                    ],
+                        const SizedBox(height: 60),
+                        const Spacer(flex: 3),
+                      ],
+                    ),
                   ),
                 ),
               ),
-
-              // 하단 모달 (Figma 디자인)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildBottomModal(viewModel),
-              ),
+              // 하단 모달 (Figma 디자인) - 키보드가 올라오면 숨김
+              if (!isKeyboardOpen)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildBottomModal(viewModel),
+                ),
             ],
           );
         },
