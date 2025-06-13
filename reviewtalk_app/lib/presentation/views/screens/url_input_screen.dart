@@ -221,6 +221,24 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                         ),
                         const SizedBox(height: 60),
                         const Spacer(flex: 3),
+                        // 특가 상품 리스트 (더미 데이터)
+                        const SizedBox(height: 32),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 27),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '🏷️ 놓치면 후회하는 오늘의 특가',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDummySpecialDeals(),
                       ],
                     ),
                   ),
@@ -443,5 +461,115 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
       return '${url.substring(0, 40)}...';
     }
     return url;
+  }
+
+  Widget _buildDummySpecialDeals() {
+    // 더미 특가 상품 데이터
+    final deals = [
+      {
+        'icon': Icons.headphones,
+        'name': '갤럭시 버즈Pro',
+        'discount': '15%',
+        'chat': true,
+      },
+      {
+        'icon': Icons.phone_iphone,
+        'name': '아이폰15 프로',
+        'discount': '5%',
+        'chat': true,
+      },
+      {
+        'icon': Icons.laptop_mac,
+        'name': 'LG그램 노트북',
+        'discount': '20%',
+        'chat': true,
+      },
+      {
+        'icon': Icons.cleaning_services,
+        'name': '다이슨 청소기',
+        'discount': '12%',
+        'chat': true,
+      },
+      {'icon': Icons.monitor, 'name': '삼성모니터', 'discount': '8%', 'chat': true},
+      {
+        'icon': Icons.sports_esports,
+        'name': 'PS5',
+        'discount': '3%',
+        'chat': true,
+      },
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children:
+                deals.take(3).map((deal) => _buildDealCard(deal)).toList(),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children:
+                deals
+                    .skip(3)
+                    .take(3)
+                    .map((deal) => _buildDealCard(deal))
+                    .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDealCard(Map deal) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(deal['icon'], size: 32, color: AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              deal['name'],
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${deal['discount']}↓',
+              style: const TextStyle(color: Colors.red, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('💬즉시채팅', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
