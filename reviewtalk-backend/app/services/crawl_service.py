@@ -20,9 +20,14 @@ class CrawlService:
         """URL 유효성 검증"""
         try:
             parsed = urlparse(str(url))
+            # 다나와 도메인 체크 (danawa.com 또는 danawa.page.link)
+            is_danawa_domain = any([
+                'danawa.com' in parsed.netloc,
+                'danawa.page.link' in parsed.netloc
+            ])
             return (
                 parsed.scheme in ['http', 'https'] and
-                'danawa.com' in parsed.netloc
+                is_danawa_domain
             )
         except Exception:
             return False

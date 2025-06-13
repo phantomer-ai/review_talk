@@ -63,6 +63,7 @@ class UrlInputViewModel extends BaseViewModel {
       'prod.danawa.com',
       'shop.danawa.com',
       'danawa.com/product',
+      'danawa.page.link',
     ];
 
     return danawaPatterns.any((pattern) => _currentUrl.contains(pattern));
@@ -75,7 +76,7 @@ class UrlInputViewModel extends BaseViewModel {
     }
 
     if (!isUrlValid()) {
-      return '올바른 다나와 상품 URL을 입력해주세요\n예: https://prod.danawa.com/info/?pcode=1234567';
+      return '올바른 다나와 상품 URL을 입력해주세요\n예: https://prod.danawa.com/info/?pcode=1234567\n또는: https://danawa.page.link/...';
     }
 
     return null;

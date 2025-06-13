@@ -9,6 +9,7 @@ class Validators {
       r'https?://prod\.danawa\.com/info/\?pcode=\d+',
       r'https?://www\.danawa\.com/product/\?productSeq=\d+',
       r'https?://danawa\.com/info/\?pcode=\d+',
+      r'https?://danawa\.page\.link/.+',
     ];
 
     for (String pattern in danawaPatterns) {
@@ -75,7 +76,7 @@ class Validators {
     }
 
     if (!isDanawaUrl(url)) {
-      return '다나와 상품 URL을 입력해주세요.\n예: https://prod.danawa.com/info/?pcode=123456';
+      return '다나와 상품 URL을 입력해주세요.\n예: https://prod.danawa.com/info/?pcode=123456\n또는: https://danawa.page.link/...';
     }
 
     return null;

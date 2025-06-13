@@ -94,7 +94,7 @@ class ReviewTalkApp extends StatelessWidget {
         fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.all(16),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: AppColors.surface,
@@ -107,7 +107,7 @@ class ReviewTalkApp extends StatelessWidget {
         labelStyle: TextStyle(color: AppColors.onSurfaceVariant),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 8,
       ),

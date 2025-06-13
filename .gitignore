@@ -63,3 +63,6 @@ reviewtalk-backend/data/
 ehthumbs.db
 Thumbs.db 
 reviewtalk_app/ios/Runner.xcodeproj/project.pbxproj
+
+
+reviewtalk-backend/env_template.txt

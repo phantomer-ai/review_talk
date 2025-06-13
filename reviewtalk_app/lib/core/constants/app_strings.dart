@@ -29,11 +29,12 @@ class AppStrings {
   static const String urlInputButton = '리뷰 분석 시작';
   static const String urlInputValidationEmpty = '다나와 상품 URL을 입력해주세요';
   static const String urlInputValidationInvalid =
-      '올바른 다나와 상품 URL을 입력해주세요\n예: https://prod.danawa.com/info/?pcode=1234567';
+      '올바른 다나와 상품 URL을 입력해주세요\n예: https://prod.danawa.com/info/?pcode=1234567\n또는: https://danawa.page.link/...';
   static const String urlInputExampleTitle = '지원하는 URL 형식:';
   static const String urlInputExample1 = '• prod.danawa.com/info/?pcode=...';
   static const String urlInputExample2 = '• shop.danawa.com/...';
   static const String urlInputExample3 = '• danawa.com/product/...';
+  static const String urlInputExample4 = '• danawa.page.link/...';
 
   // 최근 검색 기록
   static const String recentSearchTitle = '최근 검색한 상품';
