@@ -105,8 +105,8 @@ class DanawaCrawler:
             review_found = await self._navigate_to_mobile_reviews()
             
             if review_found:
-                # 리뷰 더 보기 버튼 클릭
-                await self._click_more_reviews_if_needed()
+                # 사용자가 설정한 개수만큼 리뷰 로드를 위해 더보기 버튼 반복 클릭
+                await self._click_more_reviews_if_needed(max_reviews)
                 
                 # 리뷰 데이터 추출
                 reviews = await self._extract_mobile_reviews(max_reviews)
@@ -152,22 +152,54 @@ class DanawaCrawler:
             logger.error(f"❌ 리뷰 탭 클릭 실패: {e}")
             return False
     
-    async def _click_more_reviews_if_needed(self):
-        """리뷰 더 보기 버튼이 있으면 클릭"""
-        logger.info("🔍 리뷰 더 보기 버튼 찾는 중...")
+    async def _click_more_reviews_if_needed(self, target_reviews: int):
+        """사용자가 설정한 개수만큼 리뷰를 로드하기 위해 더보기 버튼을 반복 클릭"""
+        logger.info(f"🔍 목표 {target_reviews}개 리뷰 로드를 위한 더보기 버튼 클릭 시작...")
         
         # 사용자가 제공한 정확한 펼쳐보기 셀렉터
         more_button_selector = "#productBlog-opinion-mall-button-viewMore > span"
         
-        try:
-            more_button = await self.page.query_selector(more_button_selector)
-            if more_button:
-                logger.info(f"✅ 더보기 버튼 발견!")
-                await more_button.click()
-                await asyncio.sleep(3)
-                logger.info("✅ 더 많은 리뷰 로드 완료")
-        except Exception as e:
-            logger.error(f"❌ 더보기 버튼 클릭 실패: {e}")
+        # 기본적으로 30개 정도 보이므로, 추가로 필요한 만큼 더보기 클릭
+        # 한 번 클릭할 때마다 약 30-50개씩 추가 로드됨
+        estimated_clicks = max(1, (target_reviews - 30) // 30)
+        max_clicks = min(estimated_clicks + 2, 20)  # 최대 20번까지만 클릭 (안전장치)
+        
+        logger.info(f"📊 예상 더보기 클릭 횟수: {estimated_clicks}, 최대 클릭 횟수: {max_clicks}")
+        
+        click_count = 0
+        for i in range(max_clicks):
+            try:
+                more_button = await self.page.query_selector(more_button_selector)
+                if more_button:
+                    # 버튼이 보이는지 확인
+                    is_visible = await more_button.is_visible()
+                    if is_visible:
+                        logger.info(f"✅ 더보기 버튼 {i+1}번째 클릭!")
+                        await more_button.click()
+                        click_count += 1
+                        await asyncio.sleep(3)  # 로딩 대기
+                        
+                        # 현재 로드된 리뷰 개수 확인
+                        current_reviews = await self.page.query_selector_all('[id*="productBlog-opinion-mall-list-listItem-"]')
+                        current_count = len(current_reviews)
+                        logger.info(f"📝 현재 로드된 리뷰: {current_count}개")
+                        
+                        # 목표 개수에 도달했으면 중단
+                        if current_count >= target_reviews:
+                            logger.info(f"🎯 목표 개수({target_reviews})에 도달! 더보기 클릭 중단")
+                            break
+                    else:
+                        logger.info("🔚 더보기 버튼이 보이지 않음 - 모든 리뷰 로드 완료")
+                        break
+                else:
+                    logger.info("🔚 더보기 버튼을 찾을 수 없음 - 모든 리뷰 로드 완료")
+                    break
+                    
+            except Exception as e:
+                logger.error(f"❌ 더보기 버튼 {i+1}번째 클릭 실패: {e}")
+                break
+        
+        logger.info(f"🎉 총 {click_count}번의 더보기 클릭 완료")
     
     async def _extract_mobile_reviews(self, max_reviews: int) -> List[ReviewData]:
         """모바일 페이지에서 리뷰 데이터 추출"""

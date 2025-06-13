@@ -36,9 +36,9 @@ class _MainScreenState extends State<MainScreen> {
         label: '홈',
       ),
       const BottomNavigationBarItem(
-        icon: Icon(Icons.history),
-        activeIcon: Icon(Icons.history),
-        label: '기록',
+        icon: Icon(Icons.chat_bubble_outline),
+        activeIcon: Icon(Icons.chat_bubble),
+        label: '채팅',
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.settings_outlined),
