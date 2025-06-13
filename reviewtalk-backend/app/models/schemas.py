@@ -5,7 +5,7 @@ from pydantic import BaseModel, HttpUrl, Field
 # 크롤링 관련 스키마
 class CrawlRequest(BaseModel):
     product_url: HttpUrl = Field(..., description="다나와 상품 URL")
-    max_reviews: int = Field(default=20, ge=1, le=1000, description="수집할 최대 리뷰 수")
+    max_reviews: int = Field(default=100, ge=1, le=1000, description="수집할 최대 리뷰 수")
 
 
 class ReviewData(BaseModel):

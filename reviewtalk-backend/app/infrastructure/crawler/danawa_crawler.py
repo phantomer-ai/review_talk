@@ -86,7 +86,7 @@ class DanawaCrawler:
         except Exception:
             return None
     
-    async def crawl_reviews(self, product_url: str, max_reviews: int = 20) -> List[ReviewData]:
+    async def crawl_reviews(self, product_url: str, max_reviews: int = 100) -> List[ReviewData]:
         """모바일 다나와 상품 리뷰 크롤링"""
         reviews = []
 
