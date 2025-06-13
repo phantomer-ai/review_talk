@@ -173,7 +173,34 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                             horizontal: 27,
                             vertical: 24,
                           ),
-                          child: _buildSearchInput(viewModel),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSearchInput(viewModel),
+                              const SizedBox(height: 24),
+                              // 크롤링 개수 슬라이더
+                              Text(
+                                '리뷰 ${viewModel.maxReviews}개 크롤링',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Slider(
+                                value: viewModel.maxReviews.toDouble(),
+                                min: 100,
+                                max: 1000,
+                                divisions: 9,
+                                label: '${viewModel.maxReviews}',
+                                onChanged: (value) {
+                                  viewModel.setMaxReviews(value.round());
+                                },
+                                activeColor: AppColors.mainBlue,
+                                inactiveColor: Colors.white24,
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         // 메인 타이틀 (Figma 위치)
