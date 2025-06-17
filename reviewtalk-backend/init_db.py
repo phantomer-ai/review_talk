@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS products (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS chat_room (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    product_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, product_id),
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
@@ -39,14 +49,12 @@ DROP TABLE IF EXISTS conversations;
 
 CREATE TABLE conversations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL, -- 실제 대화 주체(사람) user_id
-    product_id INTEGER,
+    chat_room_id INTEGER NOT NULL, -- chat_room FK
     message TEXT NOT NULL,
     chat_user_id TEXT NOT NULL, -- user.user_id 또는 AI의 user_id
     related_review_ids TEXT, -- 쉼표로 구분된 review_id 목록
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE SET NULL,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
+    FOREIGN KEY (chat_room_id) REFERENCES chat_room(id) ON DELETE CASCADE,
     FOREIGN KEY (chat_user_id) REFERENCES user(user_id) ON DELETE SET NULL
 );
 """

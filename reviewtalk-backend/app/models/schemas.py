@@ -50,4 +50,20 @@ class ChatResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     app_name: str
-    version: str 
+    version: str
+
+
+# 채팅방(chat_room) 관련 스키마
+class ChatRoomBase(BaseModel):
+    user_id: str = Field(..., description="채팅방 소유자(사용자) ID")
+    product_id: int = Field(..., description="상품 ID")
+
+class ChatRoomCreate(ChatRoomBase):
+    pass
+
+class ChatRoomRead(ChatRoomBase):
+    id: int = Field(..., description="채팅방 고유 ID")
+    created_at: str = Field(..., description="생성일시")
+
+class ChatRoomListResponse(BaseModel):
+    chat_rooms: list[ChatRoomRead] = Field(..., description="채팅방 목록") 

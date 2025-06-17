@@ -4,7 +4,7 @@ ReviewTalk FastAPI 애플리케이션 메인 모듈
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routes import crawl, chat
+from app.api.routes import crawl, chat, chat_room
 from loguru import logger
 import os
 import logging
@@ -52,6 +52,7 @@ def create_app() -> FastAPI:
     # 라우터 등록
     app.include_router(crawl.router)
     app.include_router(chat.router)
+    app.include_router(chat_room.router)
     
     return app
 
