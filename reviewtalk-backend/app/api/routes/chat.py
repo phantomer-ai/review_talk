@@ -24,6 +24,7 @@ async def chat_with_ai(
     try:
         # AI 서비스를 통해 답변 생성
         result = await ai_service.chat_with_reviews(
+            user_id=request.user_id,
             user_question=request.question,
             product_id=request.product_id,  # Optional product_id
             n_results=5

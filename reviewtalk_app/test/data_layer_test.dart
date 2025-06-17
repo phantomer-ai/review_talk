@@ -108,7 +108,7 @@ void main() {
 
       // Then
       expect(response.success, true);
-      expect(response.answer, '전반적으로 품질이 좋습니다');
+      expect(response.message, '전반적으로 품질이 좋습니다');
       expect(response.confidence, 0.8);
       expect(response.sourceReviews.length, 1);
       expect(response.sourceReviews.first.content, '품질 좋아요');

@@ -4,7 +4,9 @@ OpenAI GPT를 사용한 AI 응답 생성
 from typing import List, Dict, Any
 from openai import OpenAI
 from app.core.config import settings
+import logging
 
+logger = logging.getLogger(__name__)
 
 class OpenAIClient:
     """OpenAI GPT를 사용한 AI 응답 생성"""
@@ -13,6 +15,7 @@ class OpenAIClient:
         """OpenAI 클라이언트 초기화"""
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.model = "gpt-3.5-turbo"
+        logger.info(f"[OpenAIClient.__init__] 모델: {self.model}, API KEY 존재 여부: {bool(settings.openai_api_key)}")
     
     def generate_review_summary(
         self, 
@@ -21,29 +24,29 @@ class OpenAIClient:
         recent_conversations: List[Dict[str, Any]] = None
     ) -> str:
         """리뷰 데이터와 최근 대화 맥락을 바탕으로 사용자 질문에 대한 답변 생성"""
-        try:
-            # 최근 대화 맥락 준비
-            conversation_context = ""
-            if recent_conversations:
-                conversation_context = "\n\n".join([
-                    f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
-                ])
-                conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
-            # 리뷰 텍스트 준비
-            review_texts = []
-            for review in reviews:
-                document = review.get("document", "")
-                metadata = review.get("metadata", {})
-                rating = metadata.get("rating", "N/A")
-                date = metadata.get("date", "N/A")
-                
-                review_text = f"[평점: {rating}, 날짜: {date}]\n{document}"
-                review_texts.append(review_text)
-            
-            reviews_context = "\n\n".join(review_texts)
-            
-            # 시스템 프롬프트 설정
-            system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
+        logger.info(f"[generate_review_summary] 호출 - user_question: {user_question}")
+        logger.info(f"[generate_review_summary] reviews 개수: {len(reviews)}")
+        logger.info(f"[generate_review_summary] recent_conversations 개수: {len(recent_conversations) if recent_conversations else 0}")
+        # 최근 대화 맥락 준비
+        conversation_context = ""
+        if recent_conversations:
+            conversation_context = "\n\n".join([
+                f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
+            ])
+            conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
+        # 리뷰 텍스트 준비
+        review_texts = []
+        for review in reviews:
+            document = review.get("document", "")
+            metadata = review.get("metadata", {})
+            rating = metadata.get("rating", "N/A")
+            date = metadata.get("date", "N/A")
+            review_text = f"[평점: {rating}, 날짜: {date}]\n{document}"
+            review_texts.append(review_text)
+        reviews_context = "\n\n".join(review_texts)
+        logger.info(f"[generate_review_summary] reviews_context 길이: {len(reviews_context)}")
+        # 시스템 프롬프트 설정
+        system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
 리뷰를 일일이 읽지 않아도 되는 새로운 쇼핑 경험을 제공합니다.
 ## 역할
 - 사용자가 궁금해하는 상품의 특정 포인트에 대해 실제 리뷰 데이터를 기반으로 자연스럽게 답변합니다.
@@ -76,10 +79,11 @@ class OpenAIClient:
 - 감정적/광고성 표현을 피하고, 중립적이고 유용한 정보를 제공하세요.
 - 한두 리뷰만을 근거로 일반화하지 마세요. 반드시 복수의 리뷰를 종합적으로 분석하세요.
 - 너무 짧거나 기계적인 답변을 피하고, 사용자가 신뢰할 수 있도록 서술형으로 설명하세요."""
-
-            user_prompt = f"""사용자 질문: {user_question}{conversation_context}\n\n관련 리뷰 데이터:\n{reviews_context}\n\n위 리뷰 데이터와 최근 대화 맥락을 바탕으로 사용자의 질문에 답변해주세요."""
-
-            # GPT API 호출
+        user_prompt = f"""사용자 질문: {user_question}\n\n{conversation_context}\n\n관련 리뷰 데이터:\n{reviews_context}\n\n위 리뷰 데이터와 최근 대화 맥락을 바탕으로 사용자의 질문에 답변해주세요."""
+        logger.info(f"[generate_review_summary] system_prompt 길이: {len(system_prompt)}")
+        logger.info(f"[generate_review_summary] user_prompt 길이: {len(user_prompt)}")
+        # GPT API 호출
+        try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -89,34 +93,31 @@ class OpenAIClient:
                 temperature=0.7,
                 max_tokens=1000
             )
-            
+            logger.info(f"[generate_review_summary] OpenAI 응답 수신 - choices: {len(response.choices)}")
+            logger.info(f"[generate_review_summary] 응답 내용 길이: {len(response.choices[0].message.content) if response.choices and response.choices[0].message and response.choices[0].message.content else 0}")
             return response.choices[0].message.content
-            
         except Exception as e:
-            print(f"❌ OpenAI API 호출 오류: {e}")
+            logger.error(f"[generate_review_summary] OpenAI API 호출 오류: {e}", exc_info=True)
             return "죄송합니다. 현재 AI 응답을 생성할 수 없습니다. 잠시 후 다시 시도해주세요."
     
     def generate_product_overview(self, reviews: List[Dict[str, Any]]) -> str:
         """제품 전체 리뷰 요약 생성"""
-        try:
-            # 리뷰 통계 계산
-            total_reviews = len(reviews)
-            ratings = []
-            review_texts = []
-            
-            for review in reviews:
-                metadata = review.get("metadata", {})
-                rating = metadata.get("rating")
-                if rating and isinstance(rating, (int, float)):
-                    ratings.append(rating)
-                
-                document = review.get("document", "")
-                review_texts.append(document)
-            
-            avg_rating = sum(ratings) / len(ratings) if ratings else 0
-            reviews_sample = "\n\n".join(review_texts[:10])  # 최대 10개 리뷰만 사용
-            
-            system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
+        logger.info(f"[generate_product_overview] 호출 - 리뷰 개수: {len(reviews)}")
+        # 리뷰 통계 계산
+        total_reviews = len(reviews)
+        ratings = []
+        review_texts = []
+        for review in reviews:
+            metadata = review.get("metadata", {})
+            rating = metadata.get("rating")
+            if rating and isinstance(rating, (int, float)):
+                ratings.append(rating)
+            document = review.get("document", "")
+            review_texts.append(document)
+        avg_rating = sum(ratings) / len(ratings) if ratings else 0
+        reviews_sample = "\n\n".join(review_texts[:10])  # 최대 10개 리뷰만 사용
+        logger.info(f"[generate_product_overview] 평균 평점: {avg_rating:.2f}, 샘플 리뷰 개수: {len(review_texts[:10])}")
+        system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
 리뷰를 일일이 읽지 않아도 되는 새로운 쇼핑 경험을 제공합니다.
 ## 역할
 - 사용자가 궁금해하는 상품의 특정 포인트에 대해 실제 리뷰 데이터를 기반으로 자연스럽게 답변합니다.
@@ -149,14 +150,10 @@ class OpenAIClient:
 - 감정적/광고성 표현을 피하고, 중립적이고 유용한 정보를 제공하세요.
 - 한두 리뷰만을 근거로 일반화하지 마세요. 반드시 복수의 리뷰를 종합적으로 분석하세요.
 - 너무 짧거나 기계적인 답변을 피하고, 사용자가 신뢰할 수 있도록 서술형으로 설명하세요."""
-
-            user_prompt = f"""총 {total_reviews}개의 리뷰 (평균 평점: {avg_rating:.1f}/5.0)
-
-대표 리뷰들:
-{reviews_sample}
-
-위 데이터를 바탕으로 이 제품에 대한 종합적인 요약을 작성해주세요."""
-
+        user_prompt = f"""총 {total_reviews}개의 리뷰 (평균 평점: {avg_rating:.1f}/5.0)\n\n대표 리뷰들:\n{reviews_sample}\n\n위 데이터를 바탕으로 이 제품에 대한 종합적인 요약을 작성해주세요."""
+        logger.info(f"[generate_product_overview] system_prompt 길이: {len(system_prompt)}")
+        logger.info(f"[generate_product_overview] user_prompt 길이: {len(user_prompt)}")
+        try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -166,11 +163,11 @@ class OpenAIClient:
                 temperature=0.7,
                 max_tokens=800
             )
-            
+            logger.info(f"[generate_product_overview] OpenAI 응답 수신 - choices: {len(response.choices)}")
+            logger.info(f"[generate_product_overview] 응답 내용 길이: {len(response.choices[0].message.content) if response.choices and response.choices[0].message and response.choices[0].message.content else 0}")
             return response.choices[0].message.content
-            
         except Exception as e:
-            print(f"❌ 제품 요약 생성 오류: {e}")
+            logger.error(f"[generate_product_overview] OpenAI API 호출 오류: {e}", exc_info=True)
             return "제품 요약을 생성할 수 없습니다."
 
 

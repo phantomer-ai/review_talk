@@ -12,6 +12,9 @@ from app.core.config import settings
 from app.models.schemas import ReviewData
 from loguru import logger
 
+from urllib.parse import urlparse, parse_qs
+from typing import Optional
+
 
 class CustomEmbeddingFunction(EmbeddingFunction):
     """ChromaDB v0.4.16+ 호환 커스텀 임베딩 함수"""
@@ -77,7 +80,8 @@ class VectorStore:
                 
                 # None 값들을 적절한 기본값으로 변환
                 metadata = {
-                    "product_url": product_url or "unknown",
+                    # "product_url": product_url or "unknown",
+                    "product_url" : extract_product_id(product_url),
                     "rating": int(review.rating) if review.rating is not None else 0,
                     "date": review.date or "unknown",
                     "review_id": review.review_id or str(uuid.uuid4()),
@@ -114,6 +118,7 @@ class VectorStore:
             if product_url:
                 where_filter["product_url"] = product_url
             
+            logger.info(f"✅ product_id : {product_url} ")
             # 벡터 검색 수행
             results = self.collection.query(
                 query_texts=[query],
@@ -168,3 +173,16 @@ def get_vector_store():
     if vector_store is None:
         vector_store = VectorStore()
     return vector_store 
+
+def extract_product_id(url: str) -> Optional[str]:
+    """
+    주어진 URL에서 pcode 값을 추출하여 product_id로 반환합니다.
+    """
+    try:
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        product_id = query_params.get("pcode", [None])[0]
+        return product_id
+    except Exception as e:
+        print(f"URL 파싱 오류: {e}")
+        return None

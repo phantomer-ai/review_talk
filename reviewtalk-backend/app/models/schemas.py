@@ -27,6 +27,7 @@ class CrawlResponse(BaseModel):
 
 # AI 채팅 관련 스키마
 class ChatRequest(BaseModel):
+    user_id: str = Field(..., description="사용자 ID")
     product_id: Optional[str] = Field(None, description="상품 ID (없으면 전체 리뷰에서 검색)")
     question: str = Field(..., min_length=1, max_length=500, description="사용자 질문")
 

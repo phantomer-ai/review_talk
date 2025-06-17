@@ -13,13 +13,14 @@ class ConversationRepository:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or DB_PATH
 
-    def store_chat(self, product_id: Optional[int], message: str, chat_user_id: str, related_review_ids: Optional[List[str]] = None) -> int:
+    def store_chat(self, user_id: str, product_id: Optional[int], message: str, chat_user_id: str, related_review_ids: Optional[List[str]] = None) -> int:
         """
         채팅 내용을 conversations 테이블에 저장
         Args:
+            user_id (str): 실제 대화 주체(사람) user_id
             product_id (Optional[int]): 제품 ID
             message (str): 채팅 메시지
-            chat_user_id (str): 사용자 ID 또는 AI ID
+            chat_user_id (str): 메시지 작성자(사람/AI)
             related_review_ids (Optional[List[str]]): 관련 리뷰 ID 목록
         Returns:
             int: 저장된 row의 id (primary key)
@@ -30,10 +31,10 @@ class ConversationRepository:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO conversations (product_id, message, chat_user_id, related_review_ids)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO conversations (user_id, product_id, message, chat_user_id, related_review_ids)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (product_id, message, chat_user_id, related_review_ids_str)
+                (user_id, product_id, message, chat_user_id, related_review_ids_str)
             )
             conn.commit()
             return cursor.lastrowid
@@ -76,7 +77,7 @@ class ConversationRepository:
                 """
                 SELECT message, chat_user_id, related_review_ids, created_at
                 FROM conversations
-                WHERE chat_user_id = ? AND product_id = ?
+                WHERE user_id = ? AND product_id = ?
                 ORDER BY created_at DESC
                 LIMIT ?
                 """,

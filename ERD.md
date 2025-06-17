@@ -14,42 +14,42 @@ ReviewTalk 백엔드는 **하이브리드 데이터베이스 아키텍처**를 �
 ```mermaid
 erDiagram
     products {
-        integer id PK "AUTO INCREMENT"
-        text name "NOT NULL"
-        text url "UNIQUE, NOT NULL"
-        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        integer id PK
+        text name
+        text url UK
+        timestamp created_at
     }
     
     reviews {
-        integer id PK "AUTO INCREMENT"
-        integer product_id FK "NOT NULL"
-        text review_id "UNIQUE, NOT NULL"
-        text content "NOT NULL"
-        integer rating "1-5"
+        integer id PK
+        integer product_id FK
+        text review_id UK
+        text content
+        integer rating
         text author
         text date
-        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp created_at
     }
     
     conversations {
-        integer id PK "AUTO INCREMENT"
-        integer product_id FK "NULLABLE"
-        text user_message "NOT NULL"
-        text ai_response "NOT NULL"
-        text related_review_ids "comma-separated"
-        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        integer id PK
+        integer product_id FK
+        text user_message
+        text ai_response
+        text related_review_ids
+        timestamp created_at
     }
     
     chromadb_product_reviews {
-        string id "review_{review_id}"
-        vector embedding "multilingual-e5-small"
-        text document "formatted review content"
-        json metadata "product_url, rating, date, review_id, author"
+        string id
+        vector embedding
+        text document
+        json metadata
     }
     
-    products ||--o{ reviews : "has many"
-    products ||--o{ conversations : "references (optional)"
-    reviews ||--|| chromadb_product_reviews : "synchronized by review_id"
+    products ||--o{ reviews : "has"
+    products ||--o{ conversations : "references"
+    reviews ||--|| chromadb_product_reviews : "syncs_with"
 ```
 
 ## 테이블 상세 설명
