@@ -8,6 +8,7 @@ import '../widgets/common/error_widget.dart';
 import '../widgets/url_input/url_input_form.dart';
 import 'loading_screen.dart';
 import 'chat_screen.dart';
+import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// Figma 디자인을 참고한 메인 화면
 class UrlInputScreen extends StatefulWidget {

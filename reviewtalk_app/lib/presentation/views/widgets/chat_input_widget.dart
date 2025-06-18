@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// 채팅 입력 위젯
 class ChatInputWidget extends StatefulWidget {
@@ -29,6 +30,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   void _sendMessage() {
     final message = _controller.text.trim();
     if (message.isNotEmpty && !widget.isLoading) {
+      AppLogger.i('Sending message: $message');
       widget.onSendMessage(message);
       _controller.clear();
     }

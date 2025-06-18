@@ -3,8 +3,10 @@ ReviewTalk FastAPI 애플리케이션 메인 모듈
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.api.routes import crawl, chat, chat_room
+from app.api.routes import crawl, chat, chat_room, account  # 신규 계정 라우터 import
+from app.database import init_database  # 데이터베이스 모듈 import
 from loguru import logger
 import os
 import logging
@@ -29,6 +31,27 @@ class InterceptHandler(logging.Handler):
 
 logging.basicConfig(handlers=[InterceptHandler()], level=0)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """애플리케이션 라이프사이클 관리"""
+    # Startup
+    logger.info("Starting ReviewTalk API...")
+    
+    # 데이터베이스 초기화
+    try:
+        init_database()
+        logger.info("Database initialization completed")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        raise
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down ReviewTalk API...")
+
+
 def create_app() -> FastAPI:
     """FastAPI 애플리케이션 생성 및 설정"""
     
@@ -38,12 +61,13 @@ def create_app() -> FastAPI:
         description="다나와 상품 리뷰를 AI가 분석해서 답변하는 챗봇 API",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan  # 라이프사이클 설정
     )
     
     # CORS 미들웨어 설정
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=["*"], 
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -53,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(crawl.router)
     app.include_router(chat.router)
     app.include_router(chat_room.router)
+    app.include_router(account.router)  # 계정 라우터 등록
     
     return app
 
@@ -88,4 +113,4 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.debug
-    ) 
+    )

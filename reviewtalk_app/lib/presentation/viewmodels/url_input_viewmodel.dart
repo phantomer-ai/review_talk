@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/review_model.dart';
 import '../../domain/usecases/crawl_reviews.dart';
 import 'base_viewmodel.dart';
+import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// URL 입력 화면 ViewModel
 class UrlInputViewModel extends BaseViewModel {
@@ -66,7 +67,8 @@ class UrlInputViewModel extends BaseViewModel {
       'danawa.page.link',
     ];
 
-    return danawaPatterns.any((pattern) => _currentUrl.contains(pattern));
+    // return danawaPatterns.any((pattern) => _currentUrl.contains(pattern));
+    return true;
   }
 
   /// URL 유효성 에러 메시지

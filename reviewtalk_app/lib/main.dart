@@ -6,10 +6,21 @@ import 'injection_container.dart' as di;
 import 'presentation/viewmodels/chat_viewmodel.dart';
 import 'presentation/viewmodels/url_input_viewmodel.dart';
 import 'presentation/views/screens/main_screen.dart';
+import 'core/utils/user_id_manager.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await di.init();
+  // user_id 초기화 (최초 실행 시 발급 및 저장)
+  try {
+    await UserIdManager().getUserId();
+  } catch (e, s) {
+    // 치명적 에러는 아니므로 로그만 남김
+    // ignore: avoid_print
+    print('user_id 초기화 실패: $e\n$s');
+  }
   runApp(const ReviewTalkApp());
 }
 

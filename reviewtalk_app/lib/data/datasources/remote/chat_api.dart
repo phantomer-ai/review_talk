@@ -3,6 +3,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/error/exceptions.dart';
 import '../../models/chat_model.dart';
+import '../../../core/utils/user_id_manager.dart';
 
 abstract class ChatApiDataSource {
   /// AI 채팅 요청
@@ -18,11 +19,15 @@ class ChatApiDataSourceImpl implements ChatApiDataSource {
   @override
   Future<ChatResponseModel> sendMessage(ChatRequestModel request) async {
     try {
-      print('[ChatApi] 메시지 전송: ${request.question}');
-
+      print('[ChatApi] 메시지 전송: [38;5;10m[1m${request.question}[0m');
+      final userId = await UserIdManager().getUserId();
+      final data = request.toJson();
+      if (!data.containsKey('user_id')) {
+        data['user_id'] = userId;
+      }
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiConstants.chat,
-        data: request.toJson(),
+        data: data,
         options: Options(
           receiveTimeout: const Duration(seconds: 120), // AI 응답 생성을 위한 긴 타임아웃
         ),

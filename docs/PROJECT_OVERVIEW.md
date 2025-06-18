@@ -25,6 +25,12 @@ erDiagram
         string url UK
         timestamp created_at
     }
+    CHAT_ROOM {
+        int id PK
+        string user_id FK "채팅방 소유자(사람) user_id"
+        int product_id FK
+        timestamp created_at
+    }
     REVIEWS {
         int id PK
         int product_id FK
@@ -37,16 +43,17 @@ erDiagram
     }
     CONVERSATIONS {
         int id PK
-        string user_id FK  "대화 주체(사람) user_id"
-        int product_id FK
+        int chat_room_id FK "채팅방 ID"
         string message
         string chat_user_id FK "메시지 작성자(사람/AI)"
         string related_review_ids
         timestamp created_at
     }
+
     PRODUCTS ||--o{ REVIEWS : has
-    PRODUCTS ||--o{ CONVERSATIONS : has
-    USER ||--o{ CONVERSATIONS : owns
+    PRODUCTS ||--o{ CHAT_ROOM : has
+    USER ||--o{ CHAT_ROOM : owns
+    CHAT_ROOM ||--o{ CONVERSATIONS : has
     USER ||--o{ CONVERSATIONS : writes
     REVIEWS ||--o{ CONVERSATIONS : referenced_in
 ```

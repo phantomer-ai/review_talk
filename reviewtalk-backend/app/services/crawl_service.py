@@ -61,7 +61,7 @@ class CrawlService:
                 try:
                     ai_result = self.ai_service.process_and_store_reviews(
                         reviews=crawl_response.reviews,
-                        product_url=product_url
+                        product_id=product_id
                     )
                     logger.info(f"🤖 AI 저장 결과: {ai_result['message']}")
                 except Exception as ai_error:
