@@ -26,8 +26,8 @@ class UrlInputViewModel extends BaseViewModel {
   String _currentUrl = '';
   String get currentUrl => _currentUrl;
 
-  // 최대 리뷰 수 (백엔드 제한: 100개)
-  int _maxReviews = 1000;
+  // 최대 리뷰 수 (UI 제한: 300개)
+  int _maxReviews = 100;
   int get maxReviews => _maxReviews;
 
   // 최근 검색 기록
@@ -68,9 +68,9 @@ class UrlInputViewModel extends BaseViewModel {
     return null;
   }
 
-  /// 최대 리뷰 수 설정 (백엔드 제한: 최대 100개)
+  /// 최대 리뷰 수 설정 (UI 제한: 최대 300개)
   void setMaxReviews(int count) {
-    if (count > 0 && count <= 1000) {
+    if (count > 0 && count <= 300) {
       _maxReviews = count;
       notifyListeners();
     }
@@ -87,9 +87,8 @@ class UrlInputViewModel extends BaseViewModel {
       'danawa.com/product',
       'danawa.page.link',
     ];
-
-    // return danawaPatterns.any((pattern) => _currentUrl.contains(pattern));
-    return true;
+    
+    return danawaPatterns.any((pattern) => _currentUrl.contains(pattern));
   }
 
   /// URL 유효성 에러 메시지

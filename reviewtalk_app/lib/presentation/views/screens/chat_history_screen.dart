@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../data/models/special_product_model.dart';
+import '../../../data/datasources/remote/special_deals_api.dart';
 import '../../viewmodels/url_input_viewmodel.dart';
+import 'chat_screen.dart';
 
 /// 채팅 기록 아이템 모델
 class ChatHistoryItem {
@@ -13,6 +16,7 @@ class ChatHistoryItem {
   final int messageCount;
   final bool isFromUrl;
   final String? url;
+  final SpecialProductModel? specialProduct; // 특가 상품 데이터 추가
 
   ChatHistoryItem({
     required this.productIcon,
@@ -22,14 +26,55 @@ class ChatHistoryItem {
     required this.messageCount,
     required this.isFromUrl,
     this.url,
+    this.specialProduct,
   });
 }
 
 /// 채팅 히스토리 화면 - 새로운 심플한 디자인
-class ChatHistoryScreen extends StatelessWidget {
+class ChatHistoryScreen extends StatefulWidget {
   final VoidCallback? onUrlSelected;
 
   const ChatHistoryScreen({super.key, this.onUrlSelected});
+
+  @override
+  State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
+}
+
+class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
+  List<SpecialProductModel> _specialDeals = [];
+  bool _isLoadingDeals = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSpecialDeals();
+  }
+
+  /// 특가 상품 데이터 로드
+  Future<void> _loadSpecialDeals() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingDeals = true;
+    });
+
+    try {
+      final deals = await SpecialDealsApi.getSpecialDeals(limit: 6);
+      if (mounted) {
+        setState(() {
+          _specialDeals = deals;
+          _isLoadingDeals = false;
+        });
+      }
+    } catch (e) {
+      print('특가 상품 로드 오류: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingDeals = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,16 +130,19 @@ class ChatHistoryScreen extends StatelessWidget {
           return Column(
             children: [
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  itemCount: chatList.length,
-                  itemBuilder: (context, index) {
-                    final chatItem = chatList[index];
-                    return _ChatHistoryItem(
-                      chatItem: chatItem,
-                      onTap: () => _onChatItemTap(context, chatItem),
-                    );
-                  },
+                child: Container(
+                  color: Colors.grey.shade50,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    itemCount: chatList.length,
+                    itemBuilder: (context, index) {
+                      final chatItem = chatList[index];
+                      return _ChatHistoryItem(
+                        chatItem: chatItem,
+                        onTap: () => _onChatItemTap(context, chatItem),
+                      );
+                    },
+                  ),
                 ),
               ),
               _buildNewAnalysisButton(context),
@@ -105,43 +153,22 @@ class ChatHistoryScreen extends StatelessWidget {
     );
   }
 
-  // 더미 데이터와 실제 기록을 조합한 채팅 목록 생성
+  // 실제 특가 상품 데이터와 URL 기록을 조합한 채팅 목록 생성
   List<ChatHistoryItem> _buildChatList(List<String> recentUrls) {
-    // 더미 채팅 데이터 (debugging.md 참고)
-    final dummyChatList = [
-      ChatHistoryItem(
-        productIcon: '🎧',
-        productName: '삼성 갤럭시 버즈2 프로',
-        lastMessage: '배터리 지속시간이 어떤가요?',
-        timeAgo: '2시간 전',
-        messageCount: 8,
-        isFromUrl: false,
-      ),
-      ChatHistoryItem(
-        productIcon: '💻',
-        productName: 'LG 그램 17인치 노트북',
-        lastMessage: '무게는 얼마나 되나요?',
-        timeAgo: '1일 전',
-        messageCount: 12,
-        isFromUrl: false,
-      ),
-      ChatHistoryItem(
-        productIcon: '🧹',
-        productName: '다이슨 V15 무선청소기',
-        lastMessage: '소음이 심한가요?',
-        timeAgo: '3일 전',
-        messageCount: 5,
-        isFromUrl: false,
-      ),
-      ChatHistoryItem(
-        productIcon: '📱',
-        productName: '아이폰 15 프로',
-        lastMessage: '카메라 성능은 어떤가요?',
-        timeAgo: '1주일 전',
-        messageCount: 15,
-        isFromUrl: false,
-      ),
-    ];
+    // 특가 상품 데이터를 채팅 아이템으로 변환
+    final specialDealsChatList =
+        _specialDeals.map((product) {
+          return ChatHistoryItem(
+            productIcon: '🏷️', // 특가 상품 아이콘
+            productName: product.shortName,
+            lastMessage:
+                product.canChat ? '리뷰 분석 완료! 궁금한 점을 물어보세요' : '리뷰 데이터 수집 중...',
+            timeAgo: _getRelativeTime(product.createdAt),
+            messageCount: product.reviewCount,
+            isFromUrl: false,
+            specialProduct: product,
+          );
+        }).toList();
 
     // 실제 URL 기록을 채팅 아이템으로 변환
     final urlChatList =
@@ -158,8 +185,33 @@ class ChatHistoryScreen extends StatelessWidget {
           );
         }).toList();
 
-    // 더미 데이터 + 실제 데이터 조합
-    return [...urlChatList, ...dummyChatList];
+    // URL 기록 + 특가 상품 데이터 조합
+    return [...urlChatList, ...specialDealsChatList];
+  }
+
+  // 상대적 시간 계산
+  String _getRelativeTime(String? createdAt) {
+    if (createdAt == null) return '알 수 없음';
+
+    try {
+      final created = DateTime.parse(createdAt);
+      final now = DateTime.now();
+      final difference = now.difference(created);
+
+      if (difference.inMinutes < 1) {
+        return '방금 전';
+      } else if (difference.inHours < 1) {
+        return '${difference.inMinutes}분 전';
+      } else if (difference.inDays < 1) {
+        return '${difference.inHours}시간 전';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays}일 전';
+      } else {
+        return '1주일 전';
+      }
+    } catch (e) {
+      return '알 수 없음';
+    }
   }
 
   void _onChatItemTap(BuildContext context, ChatHistoryItem chatItem) {
@@ -167,15 +219,39 @@ class ChatHistoryScreen extends StatelessWidget {
       // 실제 URL 기록인 경우 - 홈 탭으로 이동
       final viewModel = Provider.of<UrlInputViewModel>(context, listen: false);
       viewModel.selectRecentUrl(chatItem.url!);
-      onUrlSelected?.call();
+      widget.onUrlSelected?.call();
+    } else if (chatItem.specialProduct != null) {
+      // 특가 상품인 경우 - 채팅 화면으로 이동
+      final product = chatItem.specialProduct!;
+      if (product.canChat) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder:
+                (context) => ChatScreen(
+                  productId: product.productId,
+                  productName: product.productName,
+                  productImage: product.imageUrl,
+                  productPrice: product.price,
+                ),
+          ),
+        );
+      } else {
+        // 리뷰 데이터가 준비되지 않은 경우
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.shortName}의 리뷰 데이터가 아직 준비되지 않았습니다.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } else {
-      // 더미 데이터인 경우 - 개별 채팅 화면으로 이동
+      // 기타 경우 - 채팅 화면으로 이동 (기본 처리)
       Navigator.of(context).push(
         MaterialPageRoute(
           builder:
-              (context) => IndividualChatScreen(
+              (context) => ChatScreen(
+                productId: chatItem.productName,
                 productName: chatItem.productName,
-                productIcon: chatItem.productIcon,
               ),
         ),
       );
@@ -208,7 +284,7 @@ class ChatHistoryScreen extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () {
           // 홈 탭으로 이동
-          onUrlSelected?.call();
+          widget.onUrlSelected?.call();
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -225,7 +301,7 @@ class ChatHistoryScreen extends StatelessWidget {
             const Icon(Icons.search, size: 20),
             const SizedBox(width: 8),
             Text(
-              '🔍 새 상품 분석하기',
+              '새 상품 분석하기',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.onPrimary,
                 fontWeight: FontWeight.w600,
@@ -306,7 +382,7 @@ class _EmptyHistoryView extends StatelessWidget {
   }
 }
 
-/// 카카오톡 스타일 채팅 기록 아이템
+/// 상품 카드 스타일 채팅 기록 아이템
 class _ChatHistoryItem extends StatelessWidget {
   final ChatHistoryItem chatItem;
   final VoidCallback onTap;
@@ -315,106 +391,220 @@ class _ChatHistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final product = chatItem.specialProduct;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 상품 아이콘
+                // 상품 이미지
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryContainer,
-                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: Text(
-                      chatItem.productIcon,
-                      style: const TextStyle(fontSize: 24),
-                    ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child:
+                        product?.imageUrl != null &&
+                                product!.imageUrl!.trim().isNotEmpty
+                            ? Image.network(
+                              'http://192.168.35.68:8000/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: 80,
+                                  height: 80,
+                                  color: Colors.grey.shade100,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              AppColors.primary,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 80,
+                                  height: 80,
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    size: 32,
+                                    color: AppColors.primary.withOpacity(0.5),
+                                  ),
+                                );
+                              },
+                            )
+                            : Container(
+                              width: 80,
+                              height: 80,
+                              color: AppColors.primary.withOpacity(0.1),
+                              child: Center(
+                                child: Text(
+                                  chatItem.productIcon,
+                                  style: const TextStyle(fontSize: 32),
+                                ),
+                              ),
+                            ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                // 채팅 정보
+                // 상품 정보
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 상품명과 시간
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              chatItem.productName,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.onSurface,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      // 상품명
+                      Text(
+                        chatItem.productName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+
+                      // 할인율 (있는 경우)
+                      if (product?.discountRate != null &&
+                          product!.discountRate!.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            product.discountRate!,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                      ],
+
+                      // 가격 정보
+                      if (product?.price != null &&
+                          product!.price!.isNotEmpty) ...[
+                        Text(
+                          product.price!,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.red,
+                          ),
+                        ),
+                        if (product.originalPrice != null &&
+                            product.originalPrice!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
                           Text(
-                            chatItem.timeAgo,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppColors.onSurfaceVariant),
+                            product.originalPrice!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              decoration: TextDecoration.lineThrough,
+                            ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      // 마지막 메시지와 개수
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              chatItem.lastMessage,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: AppColors.onSurfaceVariant),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      ],
+
+                      const SizedBox(height: 8),
+
+                      // 채팅 상태 정보
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 12,
+                              color: AppColors.primary,
                             ),
-                          ),
-                          if (chatItem.messageCount > 0) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
+                            const SizedBox(width: 4),
+                            Text(
+                              '리뷰 ${chatItem.messageCount}개 분석',
+                              style: TextStyle(
+                                fontSize: 11,
                                 color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${chatItem.messageCount}개 대화',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.onPrimary,
-                                  fontSize: 10,
-                                ),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
-                        ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // 시간 정보
+                      Text(
+                        chatItem.timeAgo,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // 화살표
+
+                // 화살표 아이콘
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: AppColors.onSurfaceVariant.withOpacity(0.5),
+                  color: Colors.grey.shade400,
                 ),
               ],
             ),

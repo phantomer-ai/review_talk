@@ -1,0 +1,1 @@
+import sqlite3; conn = sqlite3.connect("data/reviewtalk.db"); cursor = conn.cursor(); cursor.execute("SELECT name FROM sqlite_master WHERE type=\"table\""); print("Tables:", cursor.fetchall()); cursor.execute("SELECT COUNT(*) FROM special_products"); print("Special products count:", cursor.fetchone()[0]); conn.close()

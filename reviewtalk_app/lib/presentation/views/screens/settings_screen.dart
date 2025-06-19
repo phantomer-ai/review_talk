@@ -29,7 +29,6 @@ class SettingsScreen extends StatelessWidget {
 
               // ⚙️ 설정 섹션
               _buildSectionHeader(context, '⚙️ 설정'),
-              _buildMaxReviewsSetting(context, viewModel),
               _buildSettingsTiles(context),
               const SizedBox(height: 24),
 
@@ -343,85 +342,6 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-    );
-  }
-
-  Widget _buildMaxReviewsSetting(
-    BuildContext context,
-    UrlInputViewModel viewModel,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.download_outlined, color: AppColors.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '수집할 리뷰 개수',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        '현재: ${viewModel.maxReviews}개',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Slider(
-              value: viewModel.maxReviews.toDouble(),
-              min: 10,
-              max: 1000,
-              divisions: 99, // (1000-10)/10 = 99개의 구간 (10개 단위)
-              label: '${viewModel.maxReviews}개',
-              onChanged: (value) {
-                // 10개 단위로 반올림
-                final roundedValue = (value / 10).round() * 10;
-                viewModel.setMaxReviews(roundedValue);
-              },
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '10개',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  '1000개',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '리뷰 개수가 많을수록 더 정확한 분석이 가능하지만, 크롤링 시간이 오래 걸릴 수 있습니다.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

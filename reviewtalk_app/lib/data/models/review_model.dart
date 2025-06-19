@@ -78,6 +78,9 @@ class CrawlReviewsResponseModel extends Equatable {
   final bool success;
   final String productId;
   final String productName;
+  final String? productImage;
+  final String? productPrice;
+  final String? productBrand;
   final List<ReviewModel> reviews;
   final int totalReviews;
   final String? errorMessage;
@@ -86,6 +89,9 @@ class CrawlReviewsResponseModel extends Equatable {
     required this.success,
     required this.productId,
     required this.productName,
+    this.productImage,
+    this.productPrice,
+    this.productBrand,
     required this.reviews,
     required this.totalReviews,
     this.errorMessage,
@@ -97,6 +103,9 @@ class CrawlReviewsResponseModel extends Equatable {
       success: json['success'] as bool,
       productId: json['product_id'] as String,
       productName: json['product_name'] as String,
+      productImage: json['product_image'] as String?,
+      productPrice: json['product_price'] as String?,
+      productBrand: json['product_brand'] as String?,
       reviews:
           (json['reviews'] as List<dynamic>)
               .map(
@@ -115,6 +124,9 @@ class CrawlReviewsResponseModel extends Equatable {
       'success': success,
       'product_id': productId,
       'product_name': productName,
+      'product_image': productImage,
+      'product_price': productPrice,
+      'product_brand': productBrand,
       'reviews': reviews.map((review) => review.toJson()).toList(),
       'total_reviews': totalReviews,
       'error_message': errorMessage,
@@ -126,6 +138,9 @@ class CrawlReviewsResponseModel extends Equatable {
     success,
     productId,
     productName,
+    productImage,
+    productPrice,
+    productBrand,
     reviews,
     totalReviews,
     errorMessage,

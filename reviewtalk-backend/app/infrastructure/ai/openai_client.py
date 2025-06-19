@@ -14,9 +14,10 @@ class OpenAIClient:
     def __init__(self):
         """OpenAI 클라이언트 초기화"""
         self.client = OpenAI(api_key=settings.openai_api_key)
-        self.model = "gpt-3.5-turbo"
+        self.model = "gpt-4o"
         logger.info(f"[OpenAIClient.__init__] 모델: {self.model}, API KEY 존재 여부: {bool(settings.openai_api_key)}")
-    
+
+
     def generate_review_summary(
         self, 
         reviews: List[Dict[str, Any]], 
@@ -27,31 +28,32 @@ class OpenAIClient:
         logger.info(f"[generate_review_summary] 호출 - user_question: {user_question}")
         logger.info(f"[generate_review_summary] reviews 개수: {len(reviews)}")
         logger.info(f"[generate_review_summary] recent_conversations 개수: {len(recent_conversations) if recent_conversations else 0}")
-        # 최근 대화 맥락 준비
-        conversation_context = ""
-        if recent_conversations:
-            conversation_context = "\n\n".join([
-                f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
-            ])
-            conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
-        # 리뷰 텍스트 준비
-        review_texts = []
-        for review in reviews:
-            document = review.get("document", "")
-            metadata = review.get("metadata", {})
-            rating = metadata.get("rating", "N/A")
-            date = metadata.get("date", "N/A")
-            review_text = f"[평점: {rating}, 날짜: {date}]\n{document}"
-            review_texts.append(review_text)
-        reviews_context = "\n\n".join(review_texts)
-        logger.info(f"[generate_review_summary] reviews_context 길이: {len(reviews_context)}")
-        # 시스템 프롬프트 설정
-        system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
-리뷰를 일일이 읽지 않아도 되는 새로운 쇼핑 경험을 제공합니다.
+        try:
+            # 최근 대화 맥락 준비
+            conversation_context = ""
+            if recent_conversations:
+                conversation_context = "\n\n".join([
+                    f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
+                ])
+                conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
+            # 리뷰 텍스트 준비
+            review_texts = []
+            for review in reviews:
+                document = review.get("document", "")
+                metadata = review.get("metadata", {})
+                rating = metadata.get("rating", "N/A")
+                date = metadata.get("date", "N/A")
+                
+                review_text = f"[평점: {rating}, 날짜: {date}]\n{document}"
+                review_texts.append(review_text)
+            
+            reviews_context = "\n\n".join(review_texts)
+            
+            # 시스템 프롬프트 설정
+            system_prompt = """
+
 ## 역할
-- 사용자가 궁금해하는 상품의 특정 포인트에 대해 실제 리뷰 데이터를 기반으로 자연스럽게 답변합니다.
-- 긍정적인 리뷰와 부정적인 리뷰를 균형 있게 분석해 객관적인 정보를 제공합니다.
-- 리뷰에 포함되지 않은 내용은 추측하지 않고 정중히 안내합니다.
+-당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
 ## 응답 스타일
 - 친절하고 신뢰감 있는 존댓말 사용
 - 100~200자 내외의 간결하고 명확한 응답
@@ -90,7 +92,7 @@ class OpenAIClient:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.7,
+                temperature=0.3, # 0.0 ~ 1.0 사이의 값으로 설정, 리뷰기반 0.3으로 조정
                 max_tokens=1000
             )
             logger.info(f"[generate_review_summary] OpenAI 응답 수신 - choices: {len(response.choices)}")
@@ -117,12 +119,10 @@ class OpenAIClient:
         avg_rating = sum(ratings) / len(ratings) if ratings else 0
         reviews_sample = "\n\n".join(review_texts[:10])  # 최대 10개 리뷰만 사용
         logger.info(f"[generate_product_overview] 평균 평점: {avg_rating:.2f}, 샘플 리뷰 개수: {len(review_texts[:10])}")
-        system_prompt = """당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
-리뷰를 일일이 읽지 않아도 되는 새로운 쇼핑 경험을 제공합니다.
+        system_prompt = """
 ## 역할
-- 사용자가 궁금해하는 상품의 특정 포인트에 대해 실제 리뷰 데이터를 기반으로 자연스럽게 답변합니다.
-- 긍정적인 리뷰와 부정적인 리뷰를 균형 있게 분석해 객관적인 정보를 제공합니다.
-- 리뷰에 포함되지 않은 내용은 추측하지 않고 정중히 안내합니다.
+-당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
+
 ## 응답 스타일
 - 친절하고 신뢰감 있는 존댓말 사용
 - 100~200자 내외의 간결하고 명확한 응답

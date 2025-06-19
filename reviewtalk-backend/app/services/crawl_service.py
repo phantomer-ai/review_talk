@@ -4,9 +4,10 @@ from urllib.parse import urlparse
 from loguru import logger
 
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
-from app.models.schemas import CrawlRequest, CrawlResponse
+from app.models.schemas import CrawlRequest, CrawlResponse, CrawlSpecialProductsRequest
 from app.services.ai_service import AIService
 from app.utils.url_utils import extract_product_id
+from app.services.special_deals_service import special_deals_service
 
 
 class CrawlService:
@@ -34,7 +35,7 @@ class CrawlService:
             return False
     
     async def crawl_product_reviews(self, request: CrawlRequest) -> CrawlResponse:
-        """상품 리뷰 크롤링 메인 함수"""
+        """상품 리뷰 크롤링 메인 함수 (특가 상품 리뷰도 함께 처리)"""
         product_url = str(request.product_url)
         max_reviews = request.max_reviews
         
@@ -48,11 +49,12 @@ class CrawlService:
                 reviews=[],
                 error_message="유효하지 않은 다나와 URL입니다."
             )
-            
+
         product_id = extract_product_id(product_url)
-        
+
         try:
-            # 크롤링 실행 (타임아웃 60초) 타임아웃 120초로 변경
+            # 1. 입력된 상품 리뷰 크롤링 (메인 작업)
+            logger.info(f"🔍 메인 상품 리뷰 크롤링 시작: {product_url}")
             result = await asyncio.wait_for(
                 crawl_danawa_reviews(product_url, max_reviews),
                 timeout=600.0
@@ -62,14 +64,26 @@ class CrawlService:
             crawl_response = CrawlResponse(**result)
             if crawl_response.success and crawl_response.reviews:
                 try:
+                    # 상품 정보 추출
+                    product_info = {
+                        "product_name": crawl_response.product_name,
+                        "product_image": crawl_response.product_image,
+                        "product_price": crawl_response.product_price,
+                        "product_brand": crawl_response.product_brand
+                    }
+
                     product_id_int = int(product_id) if product_id is not None else None
                     ai_result = self.ai_service.process_and_store_reviews(
                         reviews=crawl_response.reviews,
-                        product_id=product_id_int
+                        product_id=product_id_int,
+                        product_info=product_info
                     )
-                    logger.info(f"🤖 AI 저장 결과: {ai_result['message']}")
+                    logger.info(f"🤖 메인 상품 AI 저장 결과: {ai_result['message']}")
                 except Exception as ai_error:
-                    logger.warning(f"⚠️ AI 저장 실패 (크롤링은 성공): {ai_error}")
+                    logger.warning(f"⚠️ 메인 상품 AI 저장 실패 (크롤링은 성공): {ai_error}")
+
+            # 2. 백그라운드에서 특가 상품 리뷰 크롤링 트리거 (비동기로 실행)
+            asyncio.create_task(self._trigger_special_deals_crawling())
             
             return crawl_response
             
@@ -80,7 +94,7 @@ class CrawlService:
                 product_name="Timeout",
                 total_reviews=0,
                 reviews=[],
-                error_message="크롤링 시간 초과 (60초)"
+                error_message="크롤링 시간 초과 (600초)"
             )
         except Exception as e:
             return CrawlResponse(
@@ -90,4 +104,30 @@ class CrawlService:
                 total_reviews=0,
                 reviews=[],
                 error_message=f"크롤링 중 오류 발생: {str(e)}"
-            ) 
+            )
+
+    async def _trigger_special_deals_crawling(self):
+        """백그라운드에서 특가 상품 리뷰 크롤링 실행"""
+        try:
+            logger.info("🏷️ 백그라운드 특가 상품 리뷰 크롤링 시작")
+
+            # 특가 상품 목록 업데이트 (리뷰 포함)
+            special_request = CrawlSpecialProductsRequest(
+                max_products=6,  # 최대 6개 상품
+                crawl_reviews=True,  # 리뷰도 함께 크롤링
+                max_reviews_per_product=100  # 상품당 최대 100개 리뷰
+            )
+
+            # 특가 상품 크롤링 및 리뷰 수집
+            special_result = await special_deals_service.crawl_and_save_special_deals(special_request)
+
+            if special_result.success:
+                logger.info(f"✅ 특가 상품 백그라운드 크롤링 완료: "
+                          f"상품 {special_result.total_products}개, "
+                          f"리뷰 있는 상품 {special_result.products_with_reviews}개, "
+                          f"총 리뷰 {special_result.total_reviews}개")
+            else:
+                logger.warning(f"⚠️ 특가 상품 백그라운드 크롤링 실패: {special_result.error_message}")
+
+        except Exception as e:
+            logger.error(f"❌ 특가 상품 백그라운드 크롤링 오류: {e}")

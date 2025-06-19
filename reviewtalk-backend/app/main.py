@@ -5,8 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.api.routes import crawl, chat, chat_room, account  # 신규 계정 라우터 import
+from app.api.routes import crawl, chat, chat_room, account, special_deals  # 신규 계정 라우터 import
 from app.database import init_database  # 데이터베이스 모듈 import
+from app.utils.scheduler import init_scheduler, shutdown_scheduler
 from loguru import logger
 import os
 import logging
@@ -37,7 +38,7 @@ async def lifespan(app: FastAPI):
     """애플리케이션 라이프사이클 관리"""
     # Startup
     logger.info("Starting ReviewTalk API...")
-    
+
     # 데이터베이스 초기화
     try:
         init_database()
@@ -45,9 +46,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down ReviewTalk API...")
 
@@ -67,7 +68,7 @@ def create_app() -> FastAPI:
     # CORS 미들웨어 설정
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"], 
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -78,7 +79,23 @@ def create_app() -> FastAPI:
     app.include_router(chat.router)
     app.include_router(chat_room.router)
     app.include_router(account.router)  # 계정 라우터 등록
-    
+    app.include_router(special_deals.router)
+
+    # 애플리케이션 이벤트 핸들러
+    @app.on_event("startup")
+    async def startup_event():
+        """애플리케이션 시작시 실행"""
+        logger.info("🚀 ReviewTalk API 서버 시작")
+        # 자동 크롤링 스케줄러 초기화
+        init_scheduler()
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """애플리케이션 종료시 실행"""
+        logger.info("🛑 ReviewTalk API 서버 종료")
+        # 스케줄러 정리
+        shutdown_scheduler()
+
     return app
 
 
