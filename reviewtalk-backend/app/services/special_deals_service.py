@@ -147,11 +147,8 @@ class SpecialDealsService:
             
             if documents:
                 vector_store = get_vector_store()
-                vector_store.add_documents(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids
-                )
+                product_info = {"product_name": product_name}
+                vector_store.add_reviews(reviews, product_id, product_info)
                 logger.info(f"✅ {len(documents)}개 리뷰를 벡터 저장소에 저장")
             
         except Exception as e:

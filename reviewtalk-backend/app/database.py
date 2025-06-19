@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS special_products (
     is_crawled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+);
 
 DROP TABLE IF EXISTS conversations;
 
