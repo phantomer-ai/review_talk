@@ -4,7 +4,8 @@ ReviewTalk FastAPI 애플리케이션 메인 모듈
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routes import crawl, chat
+from app.api.routes import crawl, chat, special_deals
+from app.utils.scheduler import init_scheduler, shutdown_scheduler
 from loguru import logger
 import os
 import logging
@@ -52,6 +53,22 @@ def create_app() -> FastAPI:
     # 라우터 등록
     app.include_router(crawl.router)
     app.include_router(chat.router)
+    app.include_router(special_deals.router)
+    
+    # 애플리케이션 이벤트 핸들러
+    @app.on_event("startup")
+    async def startup_event():
+        """애플리케이션 시작시 실행"""
+        logger.info("🚀 ReviewTalk API 서버 시작")
+        # 자동 크롤링 스케줄러 초기화
+        init_scheduler()
+    
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """애플리케이션 종료시 실행"""
+        logger.info("🛑 ReviewTalk API 서버 종료")
+        # 스케줄러 정리
+        shutdown_scheduler()
     
     return app
 

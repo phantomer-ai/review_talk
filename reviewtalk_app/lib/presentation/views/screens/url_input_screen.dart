@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../data/models/special_product_model.dart';
+import '../../../data/datasources/remote/special_deals_api.dart';
 import '../../viewmodels/url_input_viewmodel.dart';
 import '../widgets/common/custom_button.dart';
 import '../widgets/common/error_widget.dart';
@@ -22,6 +25,9 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
   final TextEditingController _maxReviewsController = TextEditingController();
   final FocusNode _urlFocusNode = FocusNode();
 
+  List<SpecialProductModel> _specialDeals = [];
+  bool _isLoadingDeals = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,7 +38,27 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
       _urlController.text = viewModel.currentUrl;
       _maxReviewsController.text = viewModel.maxReviews.toString();
       viewModel.addListener(_onViewModelChange);
+
+      // 특가 상품 로드
+      _loadSpecialDeals();
     });
+  }
+
+  /// 대체 로고 위젯 생성
+  Widget _buildFallbackLogo() {
+    return Container(
+      height: 60,
+      child: Center(
+        child: Text(
+          '📱 ReviewTalk',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -102,9 +128,101 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
             (context) => ChatScreen(
               productId: viewModel.currentUrl,
               productName: result.productName,
+              productImage: result.productImage,
+              productPrice: result.productPrice,
             ),
       ),
     );
+  }
+
+  /// 특가 상품 데이터 로드
+  Future<void> _loadSpecialDeals() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingDeals = true;
+    });
+
+    try {
+      final deals = await SpecialDealsApi.getSpecialDeals(limit: 6);
+      print('특가 상품 로드 완료: ${deals.length}개');
+      for (int i = 0; i < deals.length && i < 3; i++) {
+        print('상품 ${i + 1}: ${deals[i].productName}');
+        print('이미지 URL: ${deals[i].imageUrl}');
+        print('가격: ${deals[i].price}');
+        print('할인율: ${deals[i].discountRate}');
+        print('---');
+      }
+      if (mounted) {
+        setState(() {
+          _specialDeals = deals;
+          _isLoadingDeals = false;
+        });
+      }
+    } catch (e) {
+      print('특가 상품 로드 오류: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingDeals = false;
+        });
+      }
+    }
+  }
+
+  /// 특가 상품 채팅 시작
+  void _startChatWithProduct(SpecialProductModel product) {
+    if (!product.canChat) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${product.shortName}의 리뷰 데이터가 아직 준비되지 않았습니다.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => ChatScreen(
+              productId: product.productId,
+              productName: product.productName,
+              productImage: product.imageUrl,
+              productPrice: product.price,
+            ),
+      ),
+    );
+  }
+
+  /// 다나와 상품 페이지 열기
+  Future<void> _openDanawaProduct(SpecialProductModel product) async {
+    try {
+      final uri = Uri.parse(product.productUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication, // 외부 브라우저에서 열기
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('상품 페이지를 열 수 없습니다.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('상품 페이지 열기 오류: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _startCrawling() async {
@@ -163,11 +281,33 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // URL 입력창을 최상단으로 이동
+                    // 로고 영역 (최상단 중앙)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20, bottom: 16),
+                      child: Center(
+                        child: Container(
+                          height: 60,
+                          decoration: BoxDecoration(color: Colors.transparent),
+                          child: Image.asset(
+                            'assets/images/ReviewTalk_logo_white.png',
+                            height: 60,
+                            fit: BoxFit.contain,
+                            gaplessPlayback: true,
+                            filterQuality: FilterQuality.high,
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('🚨 로고 이미지 로딩 실패: $error');
+                              debugPrint('🚨 스택 트레이스: $stackTrace');
+                              return _buildFallbackLogo();
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    // URL 입력창
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 27,
-                        vertical: 24,
+                        vertical: 16,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,10 +324,13 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                             ),
                           ),
                           Slider(
-                            value: viewModel.maxReviews.toDouble(),
-                            min: 100,
-                            max: 1000,
-                            divisions: 9,
+                            value: viewModel.maxReviews.toDouble().clamp(
+                              50,
+                              300,
+                            ),
+                            min: 50,
+                            max: 300,
+                            divisions: 5,
                             label: '${viewModel.maxReviews}',
                             onChanged: (value) {
                               viewModel.setMaxReviews(value.round());
@@ -195,29 +338,21 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                             activeColor: AppColors.mainBlue,
                             inactiveColor: Colors.white24,
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '수집하는 리뷰가 많을수록 채팅은 정확하지만 리뷰수집 시간이 오래걸릴수있습니다',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    // 메인 타이틀 (Figma 위치)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 80),
-                      child: Text(
-                        'chat what you want',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'LibreBarcode128Text', // Figma 폰트
-                          fontSize: 40,
-                          letterSpacing: 0,
-                          fontWeight: FontWeight.normal,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 60),
-                    // 특가 상품 리스트 (더미 데이터)
                     const SizedBox(height: 32),
+                    // 특가 상품 리스트
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 27),
                       child: Align(
@@ -233,7 +368,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildDummySpecialDeals(),
+                    _buildSpecialDeals(),
                     const SizedBox(height: 50), // 하단 여백
                   ],
                 ),
@@ -294,72 +429,103 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
     );
   }
 
-  Widget _buildDummySpecialDeals() {
-    // 더미 특가 상품 데이터
-    final deals = [
-      {
-        'icon': Icons.headphones,
-        'name': '갤럭시 버즈Pro',
-        'discount': '15%',
-        'chat': true,
-      },
-      {
-        'icon': Icons.phone_iphone,
-        'name': '아이폰15 프로',
-        'discount': '5%',
-        'chat': true,
-      },
-      {
-        'icon': Icons.laptop_mac,
-        'name': 'LG그램 노트북',
-        'discount': '20%',
-        'chat': true,
-      },
-      {
-        'icon': Icons.cleaning_services,
-        'name': '다이슨 청소기',
-        'discount': '12%',
-        'chat': true,
-      },
-      {'icon': Icons.monitor, 'name': '삼성모니터', 'discount': '8%', 'chat': true},
-      {
-        'icon': Icons.sports_esports,
-        'name': 'PS5',
-        'discount': '3%',
-        'chat': true,
-      },
-    ];
+  Widget _buildSpecialDeals() {
+    if (_isLoadingDeals) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
+    if (_specialDeals.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.local_offer,
+                size: 48,
+                color: Colors.white.withOpacity(0.7),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '아직 특가 상품이 없습니다',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '잠시 후 다시 확인해보세요',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 6개씩 2행으로 표시
+    final firstRow = _specialDeals.take(3).toList();
+    final secondRow = _specialDeals.skip(3).take(3).toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
           // 첫 번째 행
-          Row(
-            children: [
-              Expanded(child: _buildDealCard(deals[0])),
-              const SizedBox(width: 8),
-              Expanded(child: _buildDealCard(deals[1])),
-              const SizedBox(width: 8),
-              Expanded(child: _buildDealCard(deals[2])),
-            ],
-          ),
-          const SizedBox(height: 16),
+          if (firstRow.isNotEmpty)
+            Row(
+              children: [
+                for (int i = 0; i < firstRow.length; i++) ...[
+                  Expanded(child: _buildDealCard(firstRow[i])),
+                  if (i < firstRow.length - 1) const SizedBox(width: 8),
+                ],
+                // 빈 공간을 채우기 위해 더미 카드 추가
+                for (int i = firstRow.length; i < 3; i++) ...[
+                  const SizedBox(width: 8),
+                  Expanded(child: Container()),
+                ],
+              ],
+            ),
+          if (firstRow.isNotEmpty && secondRow.isNotEmpty)
+            const SizedBox(height: 16),
           // 두 번째 행
-          Row(
-            children: [
-              Expanded(child: _buildDealCard(deals[3])),
-              const SizedBox(width: 8),
-              Expanded(child: _buildDealCard(deals[4])),
-              const SizedBox(width: 8),
-              Expanded(child: _buildDealCard(deals[5])),
-            ],
-          ),
+          if (secondRow.isNotEmpty)
+            Row(
+              children: [
+                for (int i = 0; i < secondRow.length; i++) ...[
+                  Expanded(child: _buildDealCard(secondRow[i])),
+                  if (i < secondRow.length - 1) const SizedBox(width: 8),
+                ],
+                // 빈 공간을 채우기 위해 더미 카드 추가
+                for (int i = secondRow.length; i < 3; i++) ...[
+                  const SizedBox(width: 8),
+                  Expanded(child: Container()),
+                ],
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDealCard(Map deal) {
+  Widget _buildDealCard(SpecialProductModel product) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -376,35 +542,190 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(deal['icon'], size: 32, color: AppColors.primary),
-          const SizedBox(height: 8),
-          Text(
-            deal['name'],
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          // 상품 이미지 (클릭 가능)
+          GestureDetector(
+            onTap: () => _openDanawaProduct(product),
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child:
+                    product.imageUrl != null &&
+                            product.imageUrl!.trim().isNotEmpty
+                        ? Image.network(
+                          'http://192.168.35.68:8000/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) {
+                              print('✅ 이미지 로딩 성공: ${product.imageUrl}');
+                              return child;
+                            }
+                            print('⏳ 이미지 로딩 중: ${product.imageUrl}');
+                            return Container(
+                              width: 60,
+                              height: 60,
+                              color: Colors.grey.shade100,
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print('❌ 이미지 로딩 실패: ${product.imageUrl}');
+                            print('❌ 오류: $error');
+                            return Container(
+                              width: 60,
+                              height: 60,
+                              color: Colors.red.shade50,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image,
+                                    size: 20,
+                                    color: Colors.red.shade300,
+                                  ),
+                                  Text(
+                                    'FAIL',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.red.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        )
+                        : Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.orange.shade50,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.image_not_supported,
+                                size: 20,
+                                color: Colors.orange.shade400,
+                              ),
+                              Text(
+                                'NO URL',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+              ),
+            ),
           ),
+          const SizedBox(height: 8),
+          // 상품명 (클릭 가능)
+          GestureDetector(
+            onTap: () => _openDanawaProduct(product),
+            child: Text(
+              product.shortName,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                color: Colors.black87,
+                decoration: TextDecoration.underline, // 클릭 가능함을 표시
+                decorationColor: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // 할인율
+          if (product.discountRate != null && product.discountRate!.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                product.discountRate!,
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           const SizedBox(height: 4),
-          Text(
-            '${deal['discount']}↓',
-            style: const TextStyle(color: Colors.red, fontSize: 12),
+          // 가격 정보
+          Column(
+            children: [
+              if (product.price != null && product.price!.isNotEmpty)
+                Text(
+                  product.price!,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Colors.red,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              if (product.originalPrice != null &&
+                  product.originalPrice!.isNotEmpty)
+                Text(
+                  product.originalPrice!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey.shade600,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
           ),
           const SizedBox(height: 8),
+          // 채팅 버튼
           SizedBox(
             width: double.infinity,
             height: 28,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed:
+                  product.canChat ? () => _startChatWithProduct(product) : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor:
+                    product.canChat ? AppColors.primary : Colors.grey,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
+                elevation: 0,
               ),
-              child: const Text('💬즉시채팅', style: TextStyle(fontSize: 10)),
+              child: Text(
+                product.canChat ? '💬즉시채팅' : '⏳준비중',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],

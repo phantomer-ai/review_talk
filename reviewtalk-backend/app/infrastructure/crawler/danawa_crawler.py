@@ -118,6 +118,157 @@ class DanawaCrawler:
 
         return reviews
     
+    async def extract_product_info(self, product_url: str) -> Dict[str, Optional[str]]:
+        """다나와 상품 페이지에서 상품 정보 추출"""
+        product_info = {
+            'product_name': None,
+            'image_url': None,
+            'price': None,
+            'brand': None
+        }
+        
+        try:
+            logger.info(f"🔍 상품 정보 추출 시작: {product_url}")
+            
+            # 상품 페이지로 이동 (아직 안했다면)
+            current_url = self.page.url
+            if current_url != product_url:
+                await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=60000)
+                await asyncio.sleep(3)
+                
+            # 페이지 스크롤하여 모든 콘텐츠 로드
+            await self._scroll_to_load_content()
+            
+            # 상품명 추출 - 사용자 제공 정확한 선택자
+            product_name_selectors = [
+                "#productBlog-productName",  # 사용자 제공 정확한 선택자
+                ".product_title",  # 백업 선택자
+                ".product-title",
+                ".prod_name",
+                ".item_name",
+                ".product_name",
+                "h1.title",
+                "h1.product-title",
+                ".title_area h1",
+                ".prod_info h1",
+                "h1",  # 마지막 대안
+                ".item_title"
+            ]
+            
+            for selector in product_name_selectors:
+                try:
+                    logger.debug(f"🔍 상품명 선택자 시도: {selector}")
+                    element = await self.page.query_selector(selector)
+                    if element:
+                        product_name = await element.inner_text()
+                        logger.debug(f"📝 추출된 텍스트: {product_name}")
+                        if product_name and len(product_name.strip()) > 0:
+                            product_info['product_name'] = product_name.strip()
+                            logger.info(f"✅ 상품명 추출 성공: {product_name[:50]}...")
+                            break
+                    else:
+                        logger.debug(f"❌ 선택자 {selector}로 요소를 찾을 수 없음")
+                except Exception as e:
+                    logger.debug(f"❌ 선택자 {selector} 오류: {e}")
+                    continue
+            
+            # 상품 이미지 추출 - 사용자 제공 정확한 선택자
+            image_selectors = [
+                "#productBlog-image-item-0 > span > img",  # 사용자 제공 정확한 선택자
+                "#productBlog-image-item-1 > span > img",  # 두 번째 이미지
+                "#productBlog-image-item-2 > span > img",  # 세 번째 이미지
+                ".thumb_area img",  # 백업 선택자
+                ".product_img img",
+                ".item_img img", 
+                ".prod_img img",
+                ".product_image img",
+                ".main_image img",
+                ".swiper-slide img",  # 다나와에서 자주 사용하는 슬라이더
+                ".thumb_list img",
+                ".gallery img",
+                "img[src*='danawa']",  # 다나와 이미지 서버
+                "img[alt*='상품']",
+                "img[alt*='제품']",
+                "img[data-src*='danawa']",  # 지연 로딩 이미지
+                "img"  # 마지막 대안
+            ]
+            
+            for selector in image_selectors:
+                try:
+                    logger.debug(f"🔍 이미지 선택자 시도: {selector}")
+                    element = await self.page.query_selector(selector)
+                    if element:
+                        src = await element.get_attribute('src')
+                        data_src = await element.get_attribute('data-src')
+                        alt = await element.get_attribute('alt')
+                        logger.debug(f"📷 src: {src}, data-src: {data_src}")
+                        
+                        # src 또는 data-src 중 유효한 것 사용
+                        image_url = src or data_src
+                        
+                        # 유효한 이미지 URL인지 확인
+                        if image_url and ('jpg' in image_url.lower() or 'jpeg' in image_url.lower() or 'png' in image_url.lower() or 'webp' in image_url.lower()):
+                            # 상대 경로를 절대 경로로 변환
+                            if image_url.startswith('/'):
+                                image_url = f"https://img.danawa.com{image_url}"
+                            elif image_url.startswith('//'):
+                                image_url = f"https:{image_url}"
+                            
+                            product_info['image_url'] = image_url
+                            logger.info(f"✅ 상품 이미지 추출 성공: {image_url}")
+                            break
+                    else:
+                        logger.debug(f"❌ 선택자 {selector}로 요소를 찾을 수 없음")
+                except Exception as e:
+                    logger.debug(f"❌ 선택자 {selector} 오류: {e}")
+                    continue
+            
+            # 가격 정보 추출 (선택사항)
+            price_selectors = [
+                ".price_real",
+                ".price_current",
+                ".price",
+                "[class*='price']",
+                ".price_info .price"
+            ]
+            
+            for selector in price_selectors:
+                try:
+                    element = await self.page.query_selector(selector)
+                    if element:
+                        price_text = await element.inner_text()
+                        if price_text and '원' in price_text:
+                            product_info['price'] = price_text.strip()
+                            logger.info(f"✅ 가격 정보 추출: {price_text}")
+                            break
+                except:
+                    continue
+            
+            # 브랜드 정보 추출 (선택사항)
+            brand_selectors = [
+                ".brand_name",
+                ".brand",
+                "[class*='brand']",
+                ".manufacturer"
+            ]
+            
+            for selector in brand_selectors:
+                try:
+                    element = await self.page.query_selector(selector)
+                    if element:
+                        brand_text = await element.inner_text()
+                        if brand_text and len(brand_text.strip()) > 0:
+                            product_info['brand'] = brand_text.strip()
+                            logger.info(f"✅ 브랜드 정보 추출: {brand_text}")
+                            break
+                except:
+                    continue
+            
+        except Exception as e:
+            logger.error(f"❌ 상품 정보 추출 오류: {e}")
+        
+        return product_info
+    
     async def _scroll_to_load_content(self):
         """스크롤하여 더 많은 콘텐츠 로드"""
         try:
@@ -288,15 +439,29 @@ async def crawl_danawa_reviews(product_url: str, max_reviews: int = 100) -> Dict
     """다나와 리뷰 크롤링 메인 함수"""
     async with DanawaCrawler() as crawler:
         try:
+            # 1. 상품 정보 먼저 추출
+            logger.info("🔍 상품 정보 추출 중...")
+            product_info = await crawler.extract_product_info(product_url)
+            
+            # 2. 리뷰 크롤링
+            logger.info("📝 리뷰 크롤링 시작...")
             reviews = await crawler.crawl_reviews(product_url, max_reviews)
             
             product_code = crawler.extract_product_code(product_url)
             
-            # CrawlResponse 스키마에 맞게 반환
+            # 추출된 상품 정보 사용
+            product_name = product_info.get('product_name')
+            if not product_name:
+                product_name = f"다나와 상품 ({product_code})" if product_code else "다나와 상품"
+            
+            # CrawlResponse 스키마에 맞게 반환 (상품 정보 포함)
             return {
                 "success": True,
                 "product_id": product_code or "unknown",
-                "product_name": f"다나와 상품 ({product_code})" if product_code else "다나와 상품",
+                "product_name": product_name,
+                "product_image": product_info.get('image_url'),  # 이미지 URL 추가
+                "product_price": product_info.get('price'),      # 가격 정보 추가
+                "product_brand": product_info.get('brand'),      # 브랜드 정보 추가
                 "total_reviews": len(reviews),
                 "reviews": reviews,  # ReviewData 객체들의 리스트
                 "error_message": None
@@ -308,6 +473,9 @@ async def crawl_danawa_reviews(product_url: str, max_reviews: int = 100) -> Dict
                 "success": False,
                 "product_id": "error", 
                 "product_name": "Error",
+                "product_image": None,
+                "product_price": None,
+                "product_brand": None,
                 "total_reviews": 0,
                 "reviews": [],
                 "error_message": str(e)

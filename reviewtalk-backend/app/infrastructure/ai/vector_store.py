@@ -64,7 +64,7 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"}
         )
     
-    def add_reviews(self, reviews: List[ReviewData], product_url: str) -> None:
+    def add_reviews(self, reviews: List[ReviewData], product_url: str, product_info: Dict[str, Any] = None) -> None:
         """리뷰 데이터를 벡터 저장소에 추가"""
         try:
             documents = []
@@ -84,6 +84,15 @@ class VectorStore:
                     "author": review.author or "anonymous"
                 }
                 
+                # 상품 정보가 있으면 메타데이터에 추가
+                if product_info:
+                    metadata.update({
+                        "product_name": product_info.get("product_name", "unknown"),
+                        "product_image": product_info.get("product_image", ""),
+                        "product_price": product_info.get("product_price", ""),
+                        "product_brand": product_info.get("product_brand", "")
+                    })
+                
                 documents.append(document)
                 metadatas.append(metadata)
                 ids.append(f"review_{metadata['review_id']}")
@@ -95,7 +104,8 @@ class VectorStore:
                 ids=ids
             )
             
-            logger.info(f"✅ {len(reviews)}개 리뷰가 벡터 저장소에 추가되었습니다.")
+            product_name = product_info.get("product_name", "상품") if product_info else "상품"
+            logger.info(f"✅ {product_name}의 {len(reviews)}개 리뷰가 벡터 저장소에 추가되었습니다.")
             
         except Exception as e:
             logger.error(f"❌ 벡터 저장소 추가 오류: {e}")
@@ -104,7 +114,7 @@ class VectorStore:
     def search_similar_reviews(
         self, 
         query: str, 
-        n_results: int = 5,
+        n_results: int = 10,
         product_url: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """유사한 리뷰 검색"""

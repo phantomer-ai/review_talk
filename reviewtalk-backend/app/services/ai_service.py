@@ -23,19 +23,24 @@ class AIService:
     def process_and_store_reviews(
         self, 
         reviews: List[ReviewData], 
-        product_url: str
+        product_url: str,
+        product_info: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """리뷰를 처리하고 벡터 저장소에 저장"""
         try:
-            # 벡터 저장소에 리뷰 추가
-            self.vector_store.add_reviews(reviews, product_url)
+            # 벡터 저장소에 리뷰 추가 (상품 정보 포함)
+            self.vector_store.add_reviews(reviews, product_url, product_info)
             
             # 통계 정보 반환
             stats = self.vector_store.get_collection_stats()
             
+            product_info_msg = ""
+            if product_info:
+                product_info_msg = f" (상품명: {product_info.get('product_name', 'N/A')})"
+            
             return {
                 "success": True,
-                "message": f"{len(reviews)}개 리뷰가 성공적으로 저장되었습니다.",
+                "message": f"{len(reviews)}개 리뷰가 성공적으로 저장되었습니다.{product_info_msg}",
                 "reviews_added": len(reviews),
                 "total_reviews_in_db": stats["total_reviews"]
             }

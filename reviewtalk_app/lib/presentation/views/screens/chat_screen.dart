@@ -12,8 +12,16 @@ import '../widgets/common/error_widget.dart';
 class ChatScreen extends StatefulWidget {
   final String productId;
   final String? productName;
+  final String? productImage;
+  final String? productPrice;
 
-  const ChatScreen({super.key, required this.productId, this.productName});
+  const ChatScreen({
+    super.key,
+    required this.productId,
+    this.productName,
+    this.productImage,
+    this.productPrice,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -138,38 +146,128 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildProductHeader(ChatViewModel viewModel) {
+    print('🔍 채팅 화면 상품 정보:');
+    print('  - 상품명: ${viewModel.productName}');
+    print('  - 이미지 URL: ${widget.productImage}');
+    print('  - 가격: ${widget.productPrice}');
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: Colors.white,
         border: Border(
           bottom: BorderSide(
             color: AppColors.outline.withOpacity(0.2),
             width: 1,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          // 상품 이미지
           Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child:
+                  widget.productImage != null &&
+                          widget.productImage!.trim().isNotEmpty
+                      ? Image.network(
+                        'http://192.168.35.68:8000/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(widget.productImage!)}',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) {
+                            print('✅ 채팅 상품 이미지 로딩 성공: ${widget.productImage}');
+                            return child;
+                          }
+                          print('⏳ 채팅 상품 이미지 로딩 중: ${widget.productImage}');
+                          return Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey.shade100,
+                            child: Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          print('❌ 채팅 상품 이미지 로딩 실패: ${widget.productImage}');
+                          print('❌ 오류: $error');
+                          return Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey.shade100,
+                            child: Icon(
+                              Icons.broken_image,
+                              size: 24,
+                              color: Colors.grey.shade400,
+                            ),
+                          );
+                        },
+                      )
+                      : Container(
+                        width: 60,
+                        height: 60,
+                        color: AppColors.primary.withOpacity(0.1),
+                        child: Icon(
+                          Icons.shopping_bag,
+                          size: 24,
+                          color: AppColors.primary,
+                        ),
+                      ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
+          // 상품 정보
           Expanded(
-            child: Text(
-              viewModel.productName!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  viewModel.productName!,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (widget.productPrice != null &&
+                    widget.productPrice!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.productPrice!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

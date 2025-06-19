@@ -94,4 +94,8 @@ class ConversationRepository:
                 for row in reversed(rows)
             ]
         finally:
-            conn.close() 
+            conn.close()
+
+
+# 전역 Repository 인스턴스
+conversation_repository = ConversationRepository() 
