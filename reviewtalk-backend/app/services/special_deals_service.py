@@ -16,7 +16,7 @@ from app.models.schemas import (
 from app.infrastructure.special_product_repository import special_product_repository
 from app.infrastructure.crawler.special_deals_crawler import crawl_special_deals
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
-from app.infrastructure.ai.vector_store import vector_store
+from app.infrastructure.ai.vector_store import get_vector_store
 from app.infrastructure.conversation_repository import conversation_repository
 
 
@@ -133,19 +133,20 @@ class SpecialDealsService:
             ids = []
             
             for review in reviews:
-                if review.get("content"):
-                    documents.append(review["content"])
+                if hasattr(review, 'content') and review.content:
+                    documents.append(review.content)
                     metadatas.append({
                         "product_id": product_id,
                         "product_name": product_name,
-                        "rating": review.get("rating"),
-                        "author": review.get("author"),
-                        "date": review.get("date"),
-                        "review_id": review.get("review_id")
+                        "rating": getattr(review, 'rating', None),
+                        "author": getattr(review, 'author', None),
+                        "date": getattr(review, 'date', None),
+                        "review_id": getattr(review, 'review_id', None)
                     })
-                    ids.append(f"{product_id}_{review.get('review_id', len(ids))}")
+                    ids.append(f"{product_id}_{getattr(review, 'review_id', len(ids))}")
             
             if documents:
+                vector_store = get_vector_store()
                 vector_store.add_documents(
                     documents=documents,
                     metadatas=metadatas,

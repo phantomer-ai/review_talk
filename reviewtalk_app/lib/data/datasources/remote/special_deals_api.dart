@@ -5,7 +5,7 @@ import '../../models/special_product_model.dart';
 
 /// 특가 상품 API 호출 서비스
 class SpecialDealsApi {
-  static const String _baseUrl = ApiConstants.baseUrl;
+  static final String _baseUrl = ApiConstants.baseUrl;
 
   /// 특가 상품 목록 조회
   static Future<List<SpecialProductModel>> getSpecialDeals({

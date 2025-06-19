@@ -55,6 +55,23 @@ CREATE TABLE IF NOT EXISTS reviews (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS special_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id TEXT UNIQUE NOT NULL,
+    product_name TEXT NOT NULL,
+    product_url TEXT NOT NULL,
+    image_url TEXT,
+    price TEXT,
+    original_price TEXT,
+    discount_rate TEXT,
+    brand TEXT,
+    category TEXT,
+    rating REAL,
+    review_count INTEGER DEFAULT 0,
+    is_crawled BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
 
 DROP TABLE IF EXISTS conversations;
 
@@ -68,6 +85,7 @@ CREATE TABLE conversations (
     FOREIGN KEY (chat_room_id) REFERENCES chat_room(id) ON DELETE CASCADE,
     FOREIGN KEY (chat_user_id) REFERENCES user(user_id) ON DELETE SET NULL
 );
+    
 """
 
 

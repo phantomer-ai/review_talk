@@ -28,29 +28,28 @@ class OpenAIClient:
         logger.info(f"[generate_review_summary] 호출 - user_question: {user_question}")
         logger.info(f"[generate_review_summary] reviews 개수: {len(reviews)}")
         logger.info(f"[generate_review_summary] recent_conversations 개수: {len(recent_conversations) if recent_conversations else 0}")
-        try:
-            # 최근 대화 맥락 준비
-            conversation_context = ""
-            if recent_conversations:
-                conversation_context = "\n\n".join([
-                    f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
-                ])
-                conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
-            # 리뷰 텍스트 준비
-            review_texts = []
-            for review in reviews:
-                document = review.get("document", "")
-                metadata = review.get("metadata", {})
-                rating = metadata.get("rating", "N/A")
-                date = metadata.get("date", "N/A")
-                
-                review_text = f"[평점: {rating}, 날짜: {date}]\n{document}"
-                review_texts.append(review_text)
+        # 최근 대화 맥락 준비
+        conversation_context = ""
+        if recent_conversations:
+            conversation_context = "\n\n".join([
+                f"[{conv.get('chat_user_id', '')}] {conv.get('message', '')}" for conv in recent_conversations
+            ])
+            conversation_context = f"\n\n[최근 대화 맥락]\n{conversation_context}"
+        # 리뷰 텍스트 준비
+        review_texts = []
+        for review in reviews:
+            document = review.get("document", "")
+            metadata = review.get("metadata", {})
+            rating = metadata.get("rating", "N/A")
+            date = metadata.get("date", "N/A")
             
-            reviews_context = "\n\n".join(review_texts)
-            
-            # 시스템 프롬프트 설정
-            system_prompt = """
+            review_text = f"[평점: {rating}, 날짜: {date}]\n{document}"
+            review_texts.append(review_text)
+        
+        reviews_context = "\n\n".join(review_texts)
+        
+        # 시스템 프롬프트 설정
+        system_prompt = """
 
 ## 역할
 -당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
@@ -68,8 +67,8 @@ class OpenAIClient:
 2. **리뷰 분석 결과 요약** (한 문장)
 3. **실제 리뷰 내용 인용** (작성일, 평점 포함하여 1~2개 서술형 인용)
    - 예:
-     [평점: ★★★★★,  “이어폰 착용감이 매우 좋아요.”
-     [평점: ★☆☆☆☆,  “반품 제품이 온 것 같아 실망했습니다.”
+     [평점: ★★★★★,  "이어폰 착용감이 매우 좋아요."
+     [평점: ★☆☆☆☆,  "반품 제품이 온 것 같아 실망했습니다."
    :오른쪽을_가리키는_손_모양: 표 형태는 사용하지 않고, 줄바꿈과 인용부호를 활용한 서술형 인용만 사용합니다.
 4. **긍/부정 요약 및 결론 제시**
 ## 예외 상황 대응
@@ -137,8 +136,8 @@ class OpenAIClient:
 2. **리뷰 분석 결과 요약** (한 문장)
 3. **실제 리뷰 내용 인용** (작성일, 평점 포함하여 1~2개 서술형 인용)
    - 예:
-     [평점: ★★★★★,  “이어폰 착용감이 매우 좋아요.”
-     [평점: ★☆☆☆☆,  “반품 제품이 온 것 같아 실망했습니다.”
+     [평점: ★★★★★,  "이어폰 착용감이 매우 좋아요."
+     [평점: ★☆☆☆☆,  "반품 제품이 온 것 같아 실망했습니다."
    :오른쪽을_가리키는_손_모양: 표 형태는 사용하지 않고, 줄바꿈과 인용부호를 활용한 서술형 인용만 사용합니다.
 4. **긍/부정 요약 및 결론 제시**
 ## 예외 상황 대응
