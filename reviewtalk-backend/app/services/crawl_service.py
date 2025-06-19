@@ -6,6 +6,7 @@ from loguru import logger
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
 from app.models.schemas import CrawlRequest, CrawlResponse
 from app.services.ai_service import AIService
+from app.utils.url_utils import extract_product_id
 
 
 class CrawlService:
@@ -47,6 +48,8 @@ class CrawlService:
                 reviews=[],
                 error_message="유효하지 않은 다나와 URL입니다."
             )
+            
+        product_id = extract_product_id(product_url)
         
         try:
             # 크롤링 실행 (타임아웃 60초) 타임아웃 120초로 변경
@@ -59,9 +62,10 @@ class CrawlService:
             crawl_response = CrawlResponse(**result)
             if crawl_response.success and crawl_response.reviews:
                 try:
+                    product_id_int = int(product_id) if product_id is not None else None
                     ai_result = self.ai_service.process_and_store_reviews(
                         reviews=crawl_response.reviews,
-                        product_id=product_id
+                        product_id=product_id_int
                     )
                     logger.info(f"🤖 AI 저장 결과: {ai_result['message']}")
                 except Exception as ai_error:

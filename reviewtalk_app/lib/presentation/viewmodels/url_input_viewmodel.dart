@@ -10,6 +10,10 @@ class UrlInputViewModel extends BaseViewModel {
   final CrawlReviews _crawlReviews;
   final SharedPreferences _prefs;
 
+  // 임시 productId 상태 추가
+  String? _productId;
+  String? get productId => _productId;
+
   UrlInputViewModel({
     required CrawlReviews crawlReviews,
     required SharedPreferences prefs,
@@ -44,7 +48,24 @@ class UrlInputViewModel extends BaseViewModel {
   /// URL 설정
   void setUrl(String url) {
     _currentUrl = url.trim();
+    _productId = _extractPcode(_currentUrl); // pcode 추출 및 저장
     notifyListeners();
+  }
+
+  // pcode 추출 함수
+  String? _extractPcode(String url) {
+    final patterns = [
+      RegExp(r'pcode=(\d+)'),
+      RegExp(r'productSeq=(\d+)'),
+      RegExp(r'code=(\d+)'),
+    ];
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(url);
+      if (match != null) {
+        return match.group(1);
+      }
+    }
+    return null;
   }
 
   /// 최대 리뷰 수 설정 (백엔드 제한: 최대 100개)
@@ -90,6 +111,9 @@ class UrlInputViewModel extends BaseViewModel {
       setError(getUrlValidationError());
       return false;
     }
+
+    // 크롤링 시작 전 productId 갱신
+    _productId = _extractPcode(_currentUrl);
 
     final result = await executeWithLoading<CrawlReviewsResponseModel>(
       () async {
@@ -175,6 +199,7 @@ class UrlInputViewModel extends BaseViewModel {
     _crawlProgress = 0.0;
     _crawlStatusMessage = '';
     _crawlResult = null;
+    _productId = null; // productId 초기화
     clearAllMessages();
   }
 }

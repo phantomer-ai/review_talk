@@ -10,6 +10,7 @@ from app.infrastructure.chat_room_repository import ChatRoomRepository
 import asyncio
 import logging
 from app.utils.cache import ConversationCache
+from app.utils.url_utils import extract_product_id
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -29,12 +30,14 @@ class AIService:
     def process_and_store_reviews(
         self, 
         reviews: List[ReviewData], 
-        product_url: str
+        product_id: str
     ) -> Dict[str, Any]:
         """리뷰를 처리하고 벡터 저장소에 저장"""
         try:
+            logger.info(f"리뷰 추가 product_id :  [{product_id}]")
+            
             # 벡터 저장소에 리뷰 추가
-            self.vector_store.add_reviews(reviews, product_url)
+            self.vector_store.add_reviews(reviews, product_id)
             
             # 통계 정보 반환
             stats = self.vector_store.get_collection_stats()
@@ -57,7 +60,7 @@ class AIService:
     async def store_chat(
         self,
         user_id: str,
-        product_id: str,
+        chat_room_id: int,
         message: str,
         chat_user_id: str,
         related_review_ids: list[str] = None
@@ -66,7 +69,7 @@ class AIService:
         채팅 내용을 conversations 테이블에 저장 (비동기, chat_room_id 기준)
         Args:
             user_id (str): 실제 대화 주체(사람) user_id
-            product_id (str): 제품 ID (product_url)
+            product_id (str): 제품 ID (product_id)
             message (str): 채팅 메시지
             chat_user_id (str): 메시지 작성자(사람/AI)
             related_review_ids (list[str], optional): 관련 리뷰 ID 목록
@@ -75,16 +78,10 @@ class AIService:
         """
         loop = asyncio.get_running_loop()
         try:
-            product_id_int = int(product_id) if product_id is not None else None
+            logger.info(f"chat_room_id: {chat_room_id}")
+            
         except Exception:
-            product_id_int = None
-        # chat_room_id 얻기 (없으면 생성)
-        chat_room_id = await loop.run_in_executor(
-            None,
-            self.chat_room_repository.create_chat_room,
-            user_id,
-            product_id_int
-        )
+            raise ValueError(f" invalid chat_room_id  :[{chat_room_id}]")
         return await loop.run_in_executor(
             None,
             self.conversation_repository.store_chat,
@@ -104,25 +101,28 @@ class AIService:
         """사용자 질문에 대해 리뷰 기반 AI 응답 생성 (비동기, chat_room_id 기준)"""
         logger.info(f"[chat_with_reviews] 시작 - user_question: '{user_question}', product_id: '{product_id}', n_results: {n_results}")
         try:
-            # chat_room_id 얻기 (없으면 생성)
-            try:
-                product_id_int = int(product_id) if product_id is not None else None
-            except Exception:
-                product_id_int = None
             loop = asyncio.get_running_loop()
-            chat_room_id = await loop.run_in_executor(
-                None,
-                self.chat_room_repository.create_chat_room,
-                user_id,
-                product_id_int
-            )
+            product_id_int = int(product_id) if product_id is not None else None
+            
+            chat_room = None
+            # 1단계: 채팅 시작
+            # 이미 채팅방이 만들어져 있는지 확인
+            chat_room = self.chat_room_repository.get_chat_room_by_user_and_product(user_id, product_id_int)
+            
+            #없다면?
+            if(chat_room == None):
+                chat_room_id = self.chat_room_repository.create_chat_room(user_id, product_id_int)
+
+            chat_room_id = chat_room.get("id")
+            
             # 2단계: 관련 리뷰 검색
             logger.info(f"[chat_with_reviews] 2단계: 리뷰 검색 시작 - query: '{user_question}', product_url: '{product_id}', n_results: {n_results}")
             similar_reviews = self.vector_store.search_similar_reviews(
                 query=user_question,
                 n_results=n_results,
-                product_url=product_id  # product_id를 product_url 파라미터에 전달
-            )
+                product_id=product_id
+                )
+                
             logger.info(f"[chat_with_reviews] 2단계: 리뷰 검색 완료 - 검색된 리뷰 수: {len(similar_reviews) if similar_reviews else 0}")
             if not similar_reviews:
                 logger.warning(f"[chat_with_reviews] 검색된 리뷰 없음 - query: '{user_question}', product_id: '{product_id}'")
@@ -132,6 +132,8 @@ class AIService:
                     "ai_response": "죄송합니다. 해당 질문과 관련된 리뷰 정보를 찾을 수 없습니다. 다른 질문을 시도해보세요.",
                     "source_reviews": []
                 }
+
+
             # 4단계: 최근 대화 30건 cache에서 조회, 없으면 db에서 조회 후 cache에 set
             logger.info(f"[chat_with_reviews] 5단계: 최근 대화 캐시 조회 시작 - chat_room_id: '{chat_room_id}'")
             recent_convs = conversation_cache.get_recent_conversations(chat_room_id)
@@ -169,19 +171,20 @@ class AIService:
             }
             await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, user_msg)
             await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, ai_msg)
+            
             # 11단계: DB 저장 (chat_room_id 기준)
             await self.store_chat(
                 user_id=user_id,
-                product_id=product_id,
+                chat_room_id=chat_room_id,
                 message=user_question,
                 chat_user_id=user_id,
                 related_review_ids=related_review_ids
             )
             await self.store_chat(
                 user_id=user_id,
-                product_id=product_id,
+                chat_room_id=chat_room_id,
                 message=ai_response,
-                chat_user_id="open_1234",
+                chat_user_id="open_ai_v1",
                 related_review_ids=related_review_ids
             )
             final_response = {

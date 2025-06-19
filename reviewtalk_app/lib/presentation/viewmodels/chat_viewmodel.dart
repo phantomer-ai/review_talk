@@ -144,6 +144,13 @@ class ChatViewModel extends BaseViewModel {
     await sendMessage(message.content);
   }
 
+  /// productId 명시적 초기화 (chat 화면 벗어날 때 호출)
+  void clearProductId() {
+    _productId = null;
+    _productName = null;
+    notifyListeners();
+  }
+
   /// 채팅 기록 삭제
   void clearChat() {
     _messages.clear();

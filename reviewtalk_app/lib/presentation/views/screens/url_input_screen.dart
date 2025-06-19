@@ -101,7 +101,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
       MaterialPageRoute(
         builder:
             (context) => ChatScreen(
-              productId: viewModel.currentUrl,
+              productId: viewModel.productId ?? viewModel.currentUrl,
               productName: result.productName,
             ),
       ),

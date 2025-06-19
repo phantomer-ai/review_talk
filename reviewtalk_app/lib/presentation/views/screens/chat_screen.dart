@@ -39,6 +39,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    final viewModel = context.read<ChatViewModel>();
+    viewModel.clearProductId();
     super.dispose();
   }
 

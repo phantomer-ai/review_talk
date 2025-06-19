@@ -27,20 +27,16 @@ async def chat_with_ai(
     chat_room_repo: ChatRoomRepository = Depends(get_chat_room_repository)
 ) -> Dict[str, Any]:
     """AI와 채팅하기 - 상품 리뷰 기반 질문 답변 (chat_room_id 기반 접근 지원)"""
-    chat_room_id = getattr(request, "chat_room_id", None)
-    if chat_room_id is not None:
-        # chat_room_id가 실제로 user_id 소유인지 검증
-        room = chat_room_repo.get_chat_room_by_id(chat_room_id)
-        if not room or room["user_id"] != request.user_id:
-            raise HTTPException(status_code=403, detail="해당 채팅방에 접근 권한이 없습니다.")
-        # chat_with_reviews에 user_id, product_id 전달 (product_id는 room에서 추출)
-        return await ai_service.chat_with_reviews(
-            user_id=request.user_id,
-            user_question=request.question,
-            product_id=str(room["product_id"]),
-            n_results=5
-        )
-    # chat_room_id가 없으면 기존 방식대로 user_id, product_id로 생성
+    
+    # user_id 에 해당하는 product_id (chat_room) 이 생성 되어있는지 확인
+    room = chat_room_repo.get_chat_room_by_user_and_product(request.user_id,request.product_id)
+    
+    # 만약 room 이 없으면?
+    if room == None:
+        chat_room_repo.create_chat_room(request.user_id, request.product_id)
+    
+    
+    # chat_with_reviews에 user_id, product_id 전달 (product_id는 room에서 추출)
     return await ai_service.chat_with_reviews(
         user_id=request.user_id,
         user_question=request.question,

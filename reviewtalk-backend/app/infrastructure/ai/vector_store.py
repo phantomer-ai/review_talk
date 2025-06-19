@@ -14,6 +14,7 @@ from loguru import logger
 
 from urllib.parse import urlparse, parse_qs
 from typing import Optional
+from app.utils.url_utils import extract_product_id
 
 
 class CustomEmbeddingFunction(EmbeddingFunction):
@@ -67,7 +68,7 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"}
         )
     
-    def add_reviews(self, reviews: List[ReviewData], product_url: str) -> None:
+    def add_reviews(self, reviews: List[ReviewData], product_id: str) -> None:
         """리뷰 데이터를 벡터 저장소에 추가"""
         try:
             documents = []
@@ -80,8 +81,7 @@ class VectorStore:
                 
                 # None 값들을 적절한 기본값으로 변환
                 metadata = {
-                    # "product_url": product_url or "unknown",
-                    "product_url" : extract_product_id(product_url),
+                    "product_id" : product_id,
                     "rating": int(review.rating) if review.rating is not None else 0,
                     "date": review.date or "unknown",
                     "review_id": review.review_id or str(uuid.uuid4()),
@@ -91,7 +91,10 @@ class VectorStore:
                 documents.append(document)
                 metadatas.append(metadata)
                 ids.append(f"review_{metadata['review_id']}")
-            
+
+            logger.info(f"metas : [{metadatas}]")
+
+
             # ChromaDB에 추가
             self.collection.add(
                 documents=documents,
@@ -109,16 +112,19 @@ class VectorStore:
         self, 
         query: str, 
         n_results: int = 5,
-        product_url: Optional[str] = None
+        product_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """유사한 리뷰 검색"""
         try:
+            
+            product_id_int = int(product_id) if product_id is not None else None
+            
             # 검색 필터 설정
             where_filter = {}
-            if product_url:
-                where_filter["product_url"] = product_url
+            if product_id:
+                where_filter["product_id"] = product_id_int
             
-            logger.info(f"✅ product_id : {product_url} ")
+            logger.info(f"✅ product_id : {product_id_int} ")
             # 벡터 검색 수행
             results = self.collection.query(
                 query_texts=[query],
@@ -173,16 +179,3 @@ def get_vector_store():
     if vector_store is None:
         vector_store = VectorStore()
     return vector_store 
-
-def extract_product_id(url: str) -> Optional[str]:
-    """
-    주어진 URL에서 pcode 값을 추출하여 product_id로 반환합니다.
-    """
-    try:
-        parsed_url = urlparse(url)
-        query_params = parse_qs(parsed_url.query)
-        product_id = query_params.get("pcode", [None])[0]
-        return product_id
-    except Exception as e:
-        print(f"URL 파싱 오류: {e}")
-        return None
