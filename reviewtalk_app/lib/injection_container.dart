@@ -96,5 +96,9 @@ Future<void> init() async {
   // 새로운 ViewModel들
   sl.registerFactory(() => UrlInputViewModel(crawlReviews: sl(), prefs: sl()));
 
-  sl.registerFactory(() => ChatViewModel(sendMessage: sl()));
+  sl.registerFactory(() => ChatViewModel(
+        sendMessage: sl(),
+        getChatHistory: sl(),
+        chatRepository: sl(),
+      ));
 }

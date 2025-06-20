@@ -16,7 +16,11 @@ abstract class ChatRepository {
   Future<void> saveMessage(ChatMessage message);
 
   /// 채팅 기록 불러오기
-  Future<List<ChatMessage>> getChatHistory({String? productId, int? limit});
+  Future<List<ChatMessage>> getChatHistory({
+    String? userId,
+    String? productId,
+    int? limit,
+  });
 
   /// 채팅 기록 삭제
   Future<void> clearChatHistory({String? productId});

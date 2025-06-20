@@ -35,9 +35,9 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
 
     // 채팅 초기화
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final viewModel = context.read<ChatViewModel>();
-      viewModel.initializeChat(
+      await viewModel.initializeChat(
         productId: widget.productId,
         productName: widget.productName ?? '상품',
       );

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/v1/account", tags=["Account"])
 
 @router.post("/guest", status_code=status.HTTP_201_CREATED)
 def create_guest_account():
-    """게스트 계정(user_id=uuid) 발급 및 user 테이블 저장"""
+    """게스트 계정(user_id=uuid) 발급 및 users 테이블 저장"""
     user_id = str(uuid.uuid4())
     user_name = "GUEST"
     user_type = "human"
@@ -19,7 +19,7 @@ def create_guest_account():
         with get_db_connection() as conn:
             conn.execute(
                 """
-                INSERT INTO user (user_id, user_name, user_type)
+                INSERT INTO users (user_id, user_name, user_type)
                 VALUES (?, ?, ?)
                 """,
                 (user_id, user_name, user_type)

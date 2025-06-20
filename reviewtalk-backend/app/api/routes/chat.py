@@ -7,6 +7,7 @@ from typing import Dict, Any
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.ai_service import AIService
 from app.infrastructure.chat_room_repository import ChatRoomRepository
+from app.infrastructure.conversation_room_repository import ConversationRoomRepository
 
 router = APIRouter(prefix="/api/v1", tags=["AI Chat"])
 
@@ -18,6 +19,10 @@ def get_ai_service() -> AIService:
 
 def get_chat_room_repository() -> ChatRoomRepository:
     return ChatRoomRepository()
+
+
+def get_conversation_room_repository() -> ConversationRoomRepository:
+    return ConversationRoomRepository()
 
 
 @router.post("/chat", response_model=Dict[str, Any])
@@ -43,6 +48,25 @@ async def chat_with_ai(
         product_id=request.product_id,
         n_results=5
     )
+
+
+@router.get("/conversations")
+async def get_conversations(
+    user_id: str,
+    product_id: int,
+    limit: int = 30,
+    repo: ConversationRoomRepository = Depends(get_conversation_room_repository),
+):
+    """user_id와 product_id로 대화 내용 조회"""
+    try:
+        conversations = repo.get_conversations_by_user_and_product(
+            user_id=user_id, product_id=product_id, limit=limit
+        )
+        return conversations
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"대화 내용 조회 중 오류 발생: {str(e)}"
+        )
 
 
 @router.get("/product-overview")

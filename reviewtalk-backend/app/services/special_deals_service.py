@@ -75,9 +75,10 @@ class SpecialDealsService:
                             reviews = review_result["reviews"]
                             review_count = len(reviews)
                             
+                            product_id_int = int(product.product_id) if product.product_id is not None else None
                             # 벡터 저장소에 리뷰 저장
                             await self._save_reviews_to_vector_store(
-                                product.product_id,
+                                product_id_int,
                                 product.product_name,
                                 reviews
                             )

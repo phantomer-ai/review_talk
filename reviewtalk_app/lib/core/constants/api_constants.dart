@@ -10,6 +10,7 @@ class ApiConstants {
   static const String crawlReviews = '/api/v1/crawl-reviews';
   static const String chat = '/api/v1/chat';
   static const String chatRooms = '/api/v1/chat-rooms/';
+  static const String conversations = '/api/v1/conversations';
 
   // Timeouts
   static const int _millisecondsInSecond = 1000; // 1초를 밀리초로 표현 (상수로 정의)
