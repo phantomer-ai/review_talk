@@ -6,6 +6,8 @@ from pydantic import BaseModel, HttpUrl, Field
 class CrawlRequest(BaseModel):
     product_url: HttpUrl = Field(..., description="다나와 상품 URL")
     max_reviews: int = Field(default=100, ge=1, le=1000, description="수집할 최대 리뷰 수")
+    is_special: bool = Field(default=False, description="특가 상품 여부")
+    user_id: Optional[str] = Field(None, description="사용자 ID")
 
 
 class ReviewData(BaseModel):
@@ -18,13 +20,10 @@ class ReviewData(BaseModel):
 
 class CrawlResponse(BaseModel):
     success: bool = Field(..., description="크롤링 성공 여부")
-    product_id: str = Field(..., description="상품 고유 ID")
-    product_name: str = Field(..., description="상품명")
-    product_image: Optional[str] = Field(None, description="상품 이미지 URL")
-    product_price: Optional[str] = Field(None, description="상품 가격")
-    product_brand: Optional[str] = Field(None, description="상품 브랜드")
-    total_reviews: int = Field(..., description="수집된 리뷰 수")
-    reviews: List[ReviewData] = Field(..., description="리뷰 목록")
+    message: str = Field(..., description="처리 결과 메시지")
+    reviews_found: int = Field(default=0, description="발견된 리뷰 수")
+    product_id: Optional[str] = Field(None, description="상품 고유 ID")
+    product_info: Optional[dict] = Field(None, description="상품 상세 정보")
     error_message: Optional[str] = Field(None, description="에러 메시지")
 
 

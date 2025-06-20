@@ -8,10 +8,12 @@ import threading
 import time
 from typing import List, Dict, Any, Optional
 from loguru import logger
+from pydantic import HttpUrl
 
 from app.infrastructure.crawler.special_deals_crawler import SpecialDealsCrawler
 from app.infrastructure.product_repository import ProductRepository
 from app.services.crawl_product_review_service import CrawlProductReviewService
+from app.models.schemas import CrawlRequest
 
 
 class SpecialDealsManageService:
@@ -95,16 +97,24 @@ class SpecialDealsManageService:
             
             for product in products:
                 try:
-                    result = await self.crawl_service.crawl_special_product(product, max_reviews)
+                    # CrawlRequest 생성 (is_special=True로 설정)
+                    crawl_request = CrawlRequest(
+                        product_url=HttpUrl(product['product_url']),
+                        max_reviews=max_reviews,
+                        is_special=True
+                    )
+                    
+                    result = await self.crawl_service.crawl_product_reviews(crawl_request)
+                    
                     crawl_results.append({
                         'product_id': product['product_id'],
                         'product_name': product.get('product_name'),
-                        'success': result.get('success', False),
-                        'reviews_found': result.get('reviews_found', 0),
-                        'message': result.get('message')
+                        'success': result.success,
+                        'reviews_found': result.reviews_found,
+                        'message': result.message
                     })
                     
-                    if result.get('success'):
+                    if result.success:
                         crawled_count += 1
                     
                     # 너무 빠른 요청 방지
@@ -272,8 +282,20 @@ class SpecialDealsManageService:
             if not product.get('is_special'):
                 return {'success': False, 'message': '특가 상품이 아닙니다.'}
             
-            result = await self.crawl_service.crawl_special_product(product, max_reviews)
-            return result
+            # CrawlRequest 생성 (is_special=True로 설정)
+            crawl_request = CrawlRequest(
+                product_url=HttpUrl(product['product_url']),
+                max_reviews=max_reviews,
+                is_special=True
+            )
+            
+            result = await self.crawl_service.crawl_product_reviews(crawl_request)
+            
+            return {
+                'success': result.success,
+                'message': result.message,
+                'reviews_found': result.reviews_found
+            }
             
         except Exception as e:
             logger.error(f"특가 상품 강제 크롤링 실패: {e}")

@@ -22,9 +22,9 @@ class CrawlProductReviewService:
         self.vector_store = VectorStore()
     
     async def crawl_product_reviews(self, request: CrawlRequest) -> CrawlResponse:
-        """상품 리뷰 크롤링 메인 플로우"""
+        """상품 리뷰 크롤링 메인 플로우 (일반 상품 및 특가 상품 통합 처리)"""
         try:
-            logger.info(f"상품 리뷰 크롤링 시작: {request.product_url}")
+            logger.info(f"상품 리뷰 크롤링 시작: {request.product_url}, 특가상품: {request.is_special}")
             
             # 1. URL에서 상품 ID 추출
             product_id = self._extract_product_id(request.product_url)
@@ -36,7 +36,7 @@ class CrawlProductReviewService:
                 )
             
             # 2. 기본 상품 정보 생성/업데이트
-            product_data = await self._create_or_update_product(product_id, request.product_url)
+            product_data = await self._create_or_update_product(product_id, request.product_url, request.is_special)
             if not product_data:
                 return CrawlResponse(
                     success=False,
@@ -47,7 +47,7 @@ class CrawlProductReviewService:
             # 3. 상품 상세 정보 크롤링 및 업데이트
             product_info = await self._crawl_product_info(request.product_url)
             if product_info:
-                await self._update_product_details(product_id, product_info)
+                await self._update_product_details(product_id, product_info, request.is_special)
             
             # 4. 리뷰 크롤링
             reviews = await self._crawl_reviews(request.product_url, request.max_reviews)
@@ -67,11 +67,12 @@ class CrawlProductReviewService:
             # 6. 상품 크롤링 상태 업데이트
             self.product_repository.update_crawl_status(product_id, True, stored_count)
             
-            logger.info(f"크롤링 완료: {product_id}, 리뷰 {stored_count}개")
+            special_msg = "특가 " if request.is_special else ""
+            logger.info(f"{special_msg}상품 크롤링 완료: {product_id}, 리뷰 {stored_count}개")
             
             return CrawlResponse(
                 success=True,
-                message=f"리뷰 크롤링이 완료되었습니다. (총 {stored_count}개)",
+                message=f"{special_msg}상품 리뷰 크롤링이 완료되었습니다. (총 {stored_count}개)",
                 reviews_found=stored_count,
                 product_id=product_id,
                 product_info=product_info
@@ -84,54 +85,6 @@ class CrawlProductReviewService:
                 message=f"크롤링 중 오류가 발생했습니다: {str(e)}",
                 reviews_found=0
             )
-    
-    async def crawl_special_product(self, product_data: Dict[str, Any], max_reviews: int = 50) -> Dict[str, Any]:
-        """특가 상품 크롤링 (special_deals_manage_service에서 호출)"""
-        try:
-            product_id = product_data.get('product_id')
-            product_url = product_data.get('product_url')
-            
-            if not product_id or not product_url:
-                return {'success': False, 'message': '상품 ID 또는 URL이 없습니다.'}
-            
-            # 1. 상품을 특가 상품으로 저장
-            product_data['is_special'] = True
-            saved_product = self.product_repository.create_or_update_product(product_data)
-            
-            if not saved_product:
-                return {'success': False, 'message': '특가 상품 저장 실패'}
-            
-            # 2. 리뷰 크롤링
-            reviews = await self._crawl_reviews(product_url, max_reviews)
-            
-            if reviews:
-                # 3. 벡터 스토어에 저장
-                stored_count = await self._store_reviews_to_vector(product_id, reviews)
-                
-                # 4. 크롤링 상태 업데이트
-                self.product_repository.update_crawl_status(product_id, True, stored_count)
-                
-                logger.info(f"특가 상품 크롤링 완료: {product_id}, 리뷰 {stored_count}개")
-                
-                return {
-                    'success': True,
-                    'message': f'특가 상품 크롤링 완료 (리뷰 {stored_count}개)',
-                    'reviews_found': stored_count,
-                    'product_id': product_id
-                }
-            else:
-                # 리뷰는 없지만 상품 정보는 저장 완료
-                self.product_repository.update_crawl_status(product_id, True, 0)
-                return {
-                    'success': True,
-                    'message': '특가 상품 저장 완료 (리뷰 없음)',
-                    'reviews_found': 0,
-                    'product_id': product_id
-                }
-            
-        except Exception as e:
-            logger.error(f"특가 상품 크롤링 실패: {e}")
-            return {'success': False, 'message': f'크롤링 실패: {str(e)}'}
     
     def _extract_product_id(self, product_url: str) -> Optional[str]:
         """URL에서 상품 ID 추출"""
@@ -150,14 +103,15 @@ class CrawlProductReviewService:
         logger.warning(f"상품 ID 추출 실패: {product_url}")
         return None
     
-    async def _create_or_update_product(self, product_id: str, product_url: str) -> Optional[Dict[str, Any]]:
+    async def _create_or_update_product(self, product_id: str, product_url: str, is_special: bool) -> Optional[Dict[str, Any]]:
         """기본 상품 정보 생성/업데이트"""
         try:
             product_data = {
                 'product_id': product_id,
                 'product_name': f'상품 {product_id}',  # 기본값, 나중에 상세 정보로 업데이트
                 'product_url': product_url,
-                'is_crawled': False
+                'is_crawled': False,
+                'is_special': is_special
             }
             
             return self.product_repository.create_or_update_product(product_data)
@@ -179,7 +133,7 @@ class CrawlProductReviewService:
             logger.error(f"상품 정보 크롤링 실패: {e}")
             return None
     
-    async def _update_product_details(self, product_id: str, product_info: Dict[str, Any]) -> bool:
+    async def _update_product_details(self, product_id: str, product_info: Dict[str, Any], is_special: bool) -> bool:
         """상품 상세 정보 업데이트"""
         try:
             update_data = {
@@ -189,7 +143,8 @@ class CrawlProductReviewService:
                 'category': product_info.get('category'),
                 'rating': product_info.get('rating'),
                 'image_url': product_info.get('image_url'),
-                'price': product_info.get('price')
+                'price': product_info.get('price'),
+                'is_special': is_special
             }
             
             updated_product = self.product_repository.create_or_update_product(update_data)

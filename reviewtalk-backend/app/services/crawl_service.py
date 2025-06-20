@@ -43,10 +43,9 @@ class CrawlService:
         if not CrawlService.validate_url(product_url):
             return CrawlResponse(
                 success=False,
+                message="유효하지 않은 다나와 URL입니다.",
+                reviews_found=0,
                 product_id="invalid",
-                product_name="Invalid URL",
-                total_reviews=0,
-                reviews=[],
                 error_message="유효하지 않은 다나와 URL입니다."
             )
 
@@ -60,27 +59,51 @@ class CrawlService:
                 timeout=600.0
             )
             
-            # 크롤링 성공 시 AI 서비스에 리뷰 저장
-            crawl_response = CrawlResponse(**result)
-            if crawl_response.success and crawl_response.reviews:
-                try:
-                    # 상품 정보 추출
-                    product_info = {
-                        "product_name": crawl_response.product_name,
-                        "product_image": crawl_response.product_image,
-                        "product_price": crawl_response.product_price,
-                        "product_brand": crawl_response.product_brand
+            # 크롤링 결과를 새로운 CrawlResponse 구조로 변환
+            if result.get('success', False):
+                reviews = result.get('reviews', [])
+                review_count = len(reviews)
+                
+                crawl_response = CrawlResponse(
+                    success=True,
+                    message=f"리뷰 크롤링이 완료되었습니다. (총 {review_count}개)",
+                    reviews_found=review_count,
+                    product_id=product_id,
+                    product_info={
+                        "product_name": result.get('product_name'),
+                        "product_image": result.get('product_image'),
+                        "product_price": result.get('product_price'),
+                        "product_brand": result.get('product_brand')
                     }
+                )
+                
+                # AI 서비스에 리뷰 저장
+                if reviews:
+                    try:
+                        product_info = {
+                            "product_name": result.get('product_name'),
+                            "product_image": result.get('product_image'),
+                            "product_price": result.get('product_price'),
+                            "product_brand": result.get('product_brand')
+                        }
 
-                    product_id_int = int(product_id) if product_id is not None else None
-                    ai_result = self.ai_service.process_and_store_reviews(
-                        reviews=crawl_response.reviews,
-                        product_id=product_id_int,
-                        product_info=product_info
-                    )
-                    logger.info(f"🤖 메인 상품 AI 저장 결과: {ai_result['message']}")
-                except Exception as ai_error:
-                    logger.warning(f"⚠️ 메인 상품 AI 저장 실패 (크롤링은 성공): {ai_error}")
+                        product_id_int = int(product_id) if product_id is not None else None
+                        ai_result = self.ai_service.process_and_store_reviews(
+                            reviews=reviews,
+                            product_id=product_id_int,
+                            product_info=product_info
+                        )
+                        logger.info(f"🤖 메인 상품 AI 저장 결과: {ai_result['message']}")
+                    except Exception as ai_error:
+                        logger.warning(f"⚠️ 메인 상품 AI 저장 실패 (크롤링은 성공): {ai_error}")
+            else:
+                crawl_response = CrawlResponse(
+                    success=False,
+                    message=result.get('error_message', '리뷰 크롤링에 실패했습니다.'),
+                    reviews_found=0,
+                    product_id=product_id,
+                    error_message=result.get('error_message', '리뷰 크롤링에 실패했습니다.')
+                )
 
             # 2. 백그라운드에서 특가 상품 리뷰 크롤링 트리거 (비동기로 실행)
             asyncio.create_task(self._trigger_special_deals_crawling())
@@ -90,19 +113,17 @@ class CrawlService:
         except asyncio.TimeoutError:
             return CrawlResponse(
                 success=False,
-                product_id="timeout",
-                product_name="Timeout",
-                total_reviews=0,
-                reviews=[],
+                message="크롤링 시간 초과 (600초)",
+                reviews_found=0,
+                product_id=product_id,
                 error_message="크롤링 시간 초과 (600초)"
             )
         except Exception as e:
             return CrawlResponse(
                 success=False,
-                product_id="error",
-                product_name="Error",
-                total_reviews=0,
-                reviews=[],
+                message=f"크롤링 중 오류 발생: {str(e)}",
+                reviews_found=0,
+                product_id=product_id,
                 error_message=f"크롤링 중 오류 발생: {str(e)}"
             )
 
