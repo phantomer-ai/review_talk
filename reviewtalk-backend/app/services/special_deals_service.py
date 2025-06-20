@@ -16,8 +16,7 @@ from app.models.schemas import (
 from app.infrastructure.special_product_repository import special_product_repository
 from app.infrastructure.crawler.special_deals_crawler import crawl_special_deals
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
-from app.infrastructure.ai.vector_store import vector_store
-from app.infrastructure.conversation_repository import conversation_repository
+from app.services.ai_service import AIService
 
 
 class SpecialDealsService:
@@ -25,6 +24,7 @@ class SpecialDealsService:
     
     def __init__(self):
         self.repository = special_product_repository
+        self.ai_service = AIService()
     
     async def crawl_and_save_special_deals(
         self, 
@@ -75,24 +75,36 @@ class SpecialDealsService:
                             reviews = review_result["reviews"]
                             review_count = len(reviews)
                             
-                            # 벡터 저장소에 리뷰 저장
-                            await self._save_reviews_to_vector_store(
-                                product.product_id,
-                                product.product_name,
-                                reviews
-                            )
-                            
-                            # 크롤링 상태 업데이트
-                            self.repository.update_crawl_status(
-                                product.product_id, 
-                                True, 
-                                review_count
-                            )
-                            
-                            products_with_reviews += 1
-                            total_reviews += review_count
-                            
-                            logger.info(f"✅ {product.product_name}: {review_count}개 리뷰 저장")
+                            # AI 서비스를 통해 리뷰 저장 (URL 크롤링과 동일한 방식)
+                            try:
+                                product_info = {
+                                    "product_name": product.product_name,
+                                    "product_image": product.image_url,
+                                    "product_price": product.price,
+                                    "product_brand": product.brand
+                                }
+                                
+                                ai_result = self.ai_service.process_and_store_reviews(
+                                    reviews=reviews,
+                                    product_url=product.product_url,
+                                    product_info=product_info
+                                )
+                                logger.info(f"🤖 {product.product_name} AI 저장 결과: {ai_result['message']}")
+                                
+                                # 크롤링 상태 업데이트
+                                self.repository.update_crawl_status(
+                                    product.product_id, 
+                                    True, 
+                                    review_count
+                                )
+                                
+                                products_with_reviews += 1
+                                total_reviews += review_count
+                                
+                                logger.info(f"✅ {product.product_name}: {review_count}개 리뷰 저장")
+                                
+                            except Exception as ai_error:
+                                logger.error(f"❌ {product.product_name} AI 저장 실패: {ai_error}")
                         else:
                             logger.warning(f"⚠️ {product.product_name}: 리뷰 크롤링 실패")
                         
@@ -120,41 +132,7 @@ class SpecialDealsService:
                 error_message=str(e)
             )
     
-    async def _save_reviews_to_vector_store(
-        self, 
-        product_id: str, 
-        product_name: str, 
-        reviews: List[Dict[str, Any]]
-    ):
-        """리뷰를 벡터 저장소에 저장"""
-        try:
-            documents = []
-            metadatas = []
-            ids = []
-            
-            for review in reviews:
-                if review.get("content"):
-                    documents.append(review["content"])
-                    metadatas.append({
-                        "product_id": product_id,
-                        "product_name": product_name,
-                        "rating": review.get("rating"),
-                        "author": review.get("author"),
-                        "date": review.get("date"),
-                        "review_id": review.get("review_id")
-                    })
-                    ids.append(f"{product_id}_{review.get('review_id', len(ids))}")
-            
-            if documents:
-                vector_store.add_documents(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids
-                )
-                logger.info(f"✅ {len(documents)}개 리뷰를 벡터 저장소에 저장")
-            
-        except Exception as e:
-            logger.error(f"❌ 벡터 저장소 저장 오류: {e}")
+
     
     def get_special_products(self, limit: int = 50, offset: int = 0) -> SpecialProductsResponse:
         """특가 상품 목록 조회"""
@@ -214,24 +192,38 @@ class SpecialDealsService:
                         reviews = review_result["reviews"]
                         review_count = len(reviews)
                         
-                        # 벡터 저장소에 저장
-                        await self._save_reviews_to_vector_store(
-                            product.product_id,
-                            product.product_name,
-                            reviews
-                        )
-                        
-                        # 크롤링 상태 업데이트
-                        self.repository.update_crawl_status(
-                            product.product_id, 
-                            True, 
-                            review_count
-                        )
-                        
-                        processed_count += 1
-                        total_reviews += review_count
-                        
-                        logger.info(f"✅ {product.product_name}: {review_count}개 리뷰 처리 완료")
+                        # AI 서비스를 통해 리뷰 저장 (URL 크롤링과 동일한 방식)
+                        try:
+                            product_info = {
+                                "product_name": product.product_name,
+                                "product_image": product.image_url,
+                                "product_price": product.price,
+                                "product_brand": product.brand
+                            }
+                            
+                            ai_result = self.ai_service.process_and_store_reviews(
+                                reviews=reviews,
+                                product_url=product.product_url,
+                                product_info=product_info
+                            )
+                            logger.info(f"🤖 {product.product_name} AI 저장 결과: {ai_result['message']}")
+                            
+                            # 크롤링 상태 업데이트
+                            self.repository.update_crawl_status(
+                                product.product_id, 
+                                True, 
+                                review_count
+                            )
+                            
+                            processed_count += 1
+                            total_reviews += review_count
+                            
+                            logger.info(f"✅ {product.product_name}: {review_count}개 리뷰 처리 완료")
+                            
+                        except Exception as ai_error:
+                            logger.error(f"❌ {product.product_name} AI 저장 실패: {ai_error}")
+                            # 실패해도 상태는 업데이트 (재시도 방지)
+                            self.repository.update_crawl_status(product.product_id, True, 0)
                     else:
                         # 실패해도 상태는 업데이트 (재시도 방지)
                         self.repository.update_crawl_status(product.product_id, True, 0)

@@ -185,7 +185,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
       MaterialPageRoute(
         builder:
             (context) => ChatScreen(
-              productId: product.productId,
+              productId: product.productUrl, // productId 대신 productUrl 사용
               productName: product.productName,
               productImage: product.imageUrl,
               productPrice: product.price,
