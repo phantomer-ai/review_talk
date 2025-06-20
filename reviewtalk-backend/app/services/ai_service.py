@@ -7,6 +7,7 @@ from app.infrastructure.ai.openai_client import get_openai_client
 from app.models.schemas import ReviewData
 from app.infrastructure.conversation_repository import ConversationRepository
 from app.infrastructure.chat_room_repository import ChatRoomRepository
+from app.infrastructure.product_repository import ProductRepository
 import asyncio
 import logging
 from app.utils.cache import ConversationCache
@@ -26,6 +27,7 @@ class AIService:
         self.openai_client = get_openai_client()
         self.conversation_repository = ConversationRepository()
         self.chat_room_repository = ChatRoomRepository()
+        self.product_repository = ProductRepository()
 
     def process_and_store_reviews(
         self, 
@@ -154,7 +156,15 @@ class AIService:
                 if recent_convs:
                     conversation_cache.set_conversations(chat_room_id, recent_convs)
                     logger.info(f"[chat_with_reviews] 6단계: 대화 캐시에 저장 완료")
-            # 7단계: AI 응답 생성 (최근 대화 30건도 전달)
+            # 6.5단계: 상품 정보 조회 (통합 테이블에서)
+            product_info = None
+            try:
+                product_info = self.product_repository.get_product_by_id(str(product_id))
+                logger.info(f"[chat_with_reviews] 상품 정보 조회 완료: {product_info.get('product_name') if product_info else '정보 없음'}")
+            except Exception as e:
+                logger.warning(f"[chat_with_reviews] 상품 정보 조회 실패: {e}")
+            
+            # 7단계: AI 응답 생성 (최근 대화 30건 + 상품 정보도 전달)
             logger.info(f"[chat_with_reviews] 7단계: AI 응답 생성 시작")
             ai_response = self.openai_client.generate_review_summary(
                 reviews=similar_reviews,
@@ -199,7 +209,12 @@ class AIService:
                 "message": "AI 응답이 성공적으로 생성되었습니다.",
                 "ai_response": ai_response,
                 "source_reviews": similar_reviews,
-                "reviews_used": len(similar_reviews)
+                "reviews_used": len(similar_reviews),
+                "product_info": {
+                    "product_id": product_info.get('product_id') if product_info else str(product_id),
+                    "product_name": product_info.get('product_name') if product_info else f"상품 {product_id}",
+                    "is_special": product_info.get('is_special', False) if product_info else False
+                } if product_id else None
             }
             return final_response
         except Exception as e:

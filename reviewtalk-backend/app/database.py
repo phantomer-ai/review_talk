@@ -26,14 +26,24 @@ CREATE TABLE IF NOT EXISTS users (
     user_type TEXT NOT NULL CHECK(user_type IN ('human', 'ai')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    url TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    product_id TEXT UNIQUE NOT NULL,
+    product_name TEXT NOT NULL,
+    product_url TEXT NOT NULL,
+    image_url TEXT,
+    price TEXT,
+    original_price TEXT,
+    discount_rate TEXT,
+    brand TEXT,
+    category TEXT,
+    rating REAL,
+    review_count INTEGER DEFAULT 0,
+    is_special BOOLEAN DEFAULT FALSE,
+    is_crawled BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS chat_room (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,

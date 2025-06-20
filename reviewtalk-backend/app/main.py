@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.api.routes import crawl, chat, chat_room, account, special_deals  # 신규 계정 라우터 import
+from app.api.routes import crawl, chat, chat_room, account, special_deals, products  # 신규 계정 라우터 import
 from app.database import init_database  # 데이터베이스 모듈 import
 from app.utils.scheduler import init_scheduler, shutdown_scheduler
 from loguru import logger
@@ -80,6 +80,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_room.router)
     app.include_router(account.router)  # 계정 라우터 등록
     app.include_router(special_deals.router)
+    app.include_router(products.router)  # 통합 상품 관리 라우터 등록
 
     # 애플리케이션 이벤트 핸들러
     @app.on_event("startup")
