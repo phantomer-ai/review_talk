@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'core/network/api_client.dart';
+import 'core/constants/api_constants.dart';
 
 // 새로운 데이터 레이어 imports
 import 'data/datasources/remote/review_api.dart';
@@ -37,7 +38,7 @@ Future<void> init() async {
   // Dio 클라이언트 설정
   final dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:8000', // Android 에뮬레이터용 URL로 변경
+      baseUrl: ApiConstants.baseUrlSync,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {'Content-Type': 'application/json'},

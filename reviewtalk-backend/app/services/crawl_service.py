@@ -50,11 +50,11 @@ class CrawlService:
             )
         
         try:
-            # 1. 입력된 상품 리뷰 크롤링 (메인 작업)
+            # 1. 입력된 상품 리뷰 크롤링 (메인 작업) - 타임아웃 축소
             logger.info(f"🔍 메인 상품 리뷰 크롤링 시작: {product_url}")
             result = await asyncio.wait_for(
                 crawl_danawa_reviews(product_url, max_reviews),
-                timeout=600.0
+                timeout=300.0  # 5분으로 축소 (기존 10분에서)
             )
             
             # 크롤링 성공 시 AI 서비스에 리뷰 저장
@@ -90,9 +90,10 @@ class CrawlService:
                 product_name="Timeout",
                 total_reviews=0,
                 reviews=[],
-                error_message="크롤링 시간 초과 (600초)"
+                error_message="크롤링 시간 초과 (300초). 네트워크 상태를 확인하거나 잠시 후 다시 시도해주세요."
             )
         except Exception as e:
+            logger.error(f"❌ 크롤링 오류: {str(e)}")
             return CrawlResponse(
                 success=False,
                 product_id="error",

@@ -5,8 +5,6 @@ import '../../models/special_product_model.dart';
 
 /// 특가 상품 API 호출 서비스
 class SpecialDealsApi {
-  static const String _baseUrl = ApiConstants.baseUrl;
-
   /// 특가 상품 목록 조회
   static Future<List<SpecialProductModel>> getSpecialDeals({
     int limit = 20,
@@ -14,7 +12,7 @@ class SpecialDealsApi {
   }) async {
     try {
       final url = Uri.parse(
-        '$_baseUrl/api/v1/special-deals?limit=$limit&offset=$offset',
+        '${ApiConstants.baseUrlSync}/api/v1/special-deals?limit=$limit&offset=$offset',
       );
 
       print('🔍 특가 상품 API 호출: $url');
@@ -67,7 +65,9 @@ class SpecialDealsApi {
     bool crawlReviews = false,
   }) async {
     try {
-      final url = Uri.parse('$_baseUrl/api/v1/special-deals/crawl');
+      final url = Uri.parse(
+        '${ApiConstants.baseUrlSync}/api/v1/special-deals/crawl',
+      );
 
       final requestData = {
         'max_products': maxProducts,
@@ -98,7 +98,9 @@ class SpecialDealsApi {
   /// 특가 상품 통계 조회
   static Future<Map<String, dynamic>?> getSpecialDealsStats() async {
     try {
-      final url = Uri.parse('$_baseUrl/api/v1/special-deals/stats/summary');
+      final url = Uri.parse(
+        '${ApiConstants.baseUrlSync}/api/v1/special-deals/stats/summary',
+      );
 
       final response = await http
           .get(url, headers: {'Content-Type': 'application/json'})

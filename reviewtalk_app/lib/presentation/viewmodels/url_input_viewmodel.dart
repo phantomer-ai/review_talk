@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/review_model.dart';
@@ -39,6 +40,11 @@ class UrlInputViewModel extends BaseViewModel {
   // 크롤링 결과
   CrawlReviewsResponseModel? _crawlResult;
   CrawlReviewsResponseModel? get crawlResult => _crawlResult;
+
+  // 크롤링 취소용 Completer
+  Completer<void>? _cancelCompleter;
+  bool _isCancelled = false;
+  bool get isCancelled => _isCancelled;
 
   /// URL 설정
   void setUrl(String url) {
@@ -89,9 +95,18 @@ class UrlInputViewModel extends BaseViewModel {
       return false;
     }
 
+    // 취소 상태 초기화
+    _isCancelled = false;
+    _cancelCompleter = Completer<void>();
+
     final result = await executeWithLoading<CrawlReviewsResponseModel>(
       () async {
         _updateCrawlProgress(0.1, '리뷰 수집을 준비하고 있습니다...');
+
+        // 취소 확인
+        if (_isCancelled) {
+          throw Exception('사용자가 크롤링을 취소했습니다.');
+        }
 
         final params = CrawlReviewsParams(
           productUrl: _currentUrl,
@@ -100,6 +115,11 @@ class UrlInputViewModel extends BaseViewModel {
 
         _updateCrawlProgress(0.3, '상품 정보를 가져오고 있습니다...');
 
+        // 취소 확인
+        if (_isCancelled) {
+          throw Exception('사용자가 크롤링을 취소했습니다.');
+        }
+
         final result = await _crawlReviews(params);
 
         return result.fold(
@@ -107,6 +127,11 @@ class UrlInputViewModel extends BaseViewModel {
             throw Exception(failure.message);
           },
           (success) {
+            // 취소 확인
+            if (_isCancelled) {
+              throw Exception('사용자가 크롤링을 취소했습니다.');
+            }
+
             _updateCrawlProgress(0.8, '리뷰 분석을 완료하고 있습니다...');
             return success;
           },
@@ -116,7 +141,7 @@ class UrlInputViewModel extends BaseViewModel {
       successMessage: '$_maxReviews개의 리뷰를 성공적으로 수집했습니다!',
     );
 
-    if (result != null) {
+    if (result != null && !_isCancelled) {
       _crawlResult = result;
       _updateCrawlProgress(1.0, '완료!');
       await _saveToRecentUrls(_currentUrl);
@@ -126,8 +151,22 @@ class UrlInputViewModel extends BaseViewModel {
     return false;
   }
 
+  /// 크롤링 취소
+  void cancelCrawling() {
+    _isCancelled = true;
+    if (_cancelCompleter != null && !_cancelCompleter!.isCompleted) {
+      _cancelCompleter!.complete();
+    }
+
+    // 상태 초기화
+    resetCrawlState();
+    setSuccess('크롤링이 취소되었습니다.');
+  }
+
   /// 크롤링 진행 상태 업데이트
   void _updateCrawlProgress(double progress, String message) {
+    if (_isCancelled) return; // 취소된 경우 업데이트 중단
+
     _crawlProgress = progress;
     _crawlStatusMessage = message;
     notifyListeners();
@@ -173,6 +212,8 @@ class UrlInputViewModel extends BaseViewModel {
     _crawlProgress = 0.0;
     _crawlStatusMessage = '';
     _crawlResult = null;
+    _isCancelled = false;
+    _cancelCompleter = null;
     clearAllMessages();
   }
 }

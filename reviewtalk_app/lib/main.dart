@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_strings.dart';
+import 'core/constants/api_constants.dart';
 import 'injection_container.dart' as di;
 import 'presentation/viewmodels/chat_viewmodel.dart';
 import 'presentation/viewmodels/url_input_viewmodel.dart';
@@ -9,6 +11,15 @@ import 'presentation/views/screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
+  // 서버 자동 탐지
+  print('🔍 서버 탐지 중...');
+  final serverUrl = await ApiConstants.baseUrl;
+  print('✅ 서버 탐지 완료: $serverUrl');
+
   await di.init();
   runApp(const ReviewTalkApp());
 }

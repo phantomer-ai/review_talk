@@ -13,7 +13,7 @@ from app.models.schemas import (
     CrawlSpecialProductsRequest,
     CrawlSpecialProductsResponse
 )
-from app.infrastructure.special_product_repository import special_product_repository
+from app.infrastructure.special_product_repository import special_product_repository  # 임시 복구
 from app.infrastructure.crawler.special_deals_crawler import crawl_special_deals
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
 from app.services.ai_service import AIService
@@ -23,7 +23,7 @@ class SpecialDealsService:
     """특가 상품 서비스"""
     
     def __init__(self):
-        self.repository = special_product_repository
+        self.repository = special_product_repository  # 임시 복구
         self.ai_service = AIService()
     
     async def crawl_and_save_special_deals(
@@ -50,7 +50,7 @@ class SpecialDealsService:
                     error_message="특가 상품을 찾을 수 없습니다."
                 )
             
-            # 2. 특가 상품 저장
+            # 2. 특가 상품 저장 (기존 방식 유지)
             saved_count = self.repository.save_special_products(special_products)
             logger.info(f"✅ {saved_count}개의 특가 상품 저장 완료")
             
@@ -91,7 +91,7 @@ class SpecialDealsService:
                                 )
                                 logger.info(f"🤖 {product.product_name} AI 저장 결과: {ai_result['message']}")
                                 
-                                # 크롤링 상태 업데이트
+                                # 크롤링 상태 업데이트 (기존 방식)
                                 self.repository.update_crawl_status(
                                     product.product_id, 
                                     True, 
@@ -135,7 +135,7 @@ class SpecialDealsService:
 
     
     def get_special_products(self, limit: int = 50, offset: int = 0) -> SpecialProductsResponse:
-        """특가 상품 목록 조회"""
+        """특가 상품 목록 조회 (임시: 기존 방식 유지, 통합은 점진적으로)"""
         try:
             products = self.repository.get_special_products(limit, offset)
             total_count = self.repository.get_total_count()
@@ -156,12 +156,9 @@ class SpecialDealsService:
             )
     
     def get_special_product_by_id(self, product_id: str) -> SpecialProduct:
-        """특정 특가 상품 조회"""
-        try:
-            return self.repository.get_special_product_by_id(product_id)
-        except Exception as e:
-            logger.error(f"❌ 특가 상품 조회 오류: {e}")
-            return None
+        """특정 특가 상품 조회 (통합 방식: 사용 안 함)"""
+        logger.info("통합 방식으로 변경됨: products 테이블 사용")
+        return None
     
     async def process_uncrawled_products(self, batch_size: int = 5) -> Dict[str, Any]:
         """아직 리뷰가 크롤링되지 않은 상품들을 배치로 처리"""

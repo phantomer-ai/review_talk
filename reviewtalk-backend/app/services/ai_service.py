@@ -8,6 +8,9 @@ from app.models.schemas import ReviewData
 from app.infrastructure.conversation_repository import ConversationRepository
 import asyncio
 from app.utils.cache import ConversationCache
+import sqlite3
+from loguru import logger
+from app.core.config import settings
 
 conversation_cache = ConversationCache(maxlen=30)
 
@@ -26,9 +29,15 @@ class AIService:
         product_url: str,
         product_info: Dict[str, Any] = None
     ) -> Dict[str, Any]:
-        """리뷰를 처리하고 벡터 저장소에 저장"""
+        """리뷰를 처리하고 벡터 저장소 및 일반 DB에 저장 (통합 방식)"""
         try:
-            # 벡터 저장소에 리뷰 추가 (상품 정보 포함)
+            # 1. products 테이블에 상품 정보 저장 (UPSERT)
+            product_id = self._save_product_to_db(product_url, product_info)
+            
+            # 2. reviews 테이블에 리뷰 저장
+            self._save_reviews_to_db(product_id, reviews)
+            
+            # 3. 벡터 저장소에 리뷰 추가 (상품 정보 포함)
             self.vector_store.add_reviews(reviews, product_url, product_info)
             
             # 통계 정보 반환
@@ -217,4 +226,85 @@ class AIService:
                 "success": False,
                 "message": f"통계 조회 중 오류 발생: {str(e)}",
                 "stats": {"total_reviews": 0, "collection_name": "unknown"}
-            } 
+            }
+    
+    def _save_product_to_db(self, product_url: str, product_info: Dict[str, Any] = None) -> int:
+        """products 테이블에 상품 정보 저장 (UPSERT) - 통합 방식"""
+        try:
+            db_path = settings.database_url.replace("sqlite:///", "")
+            
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                
+                # 상품명 결정
+                product_name = "다나와 상품"
+                if product_info and product_info.get("product_name"):
+                    product_name = product_info["product_name"]
+                
+                # UPSERT: 기존 상품이 있으면 업데이트, 없으면 삽입
+                cursor.execute("""
+                    INSERT INTO products (name, url, created_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(url) DO UPDATE SET
+                        name = excluded.name,
+                        created_at = created_at
+                """, (product_name, product_url))
+                
+                # 상품 ID 조회
+                cursor.execute("SELECT id FROM products WHERE url = ?", (product_url,))
+                result = cursor.fetchone()
+                
+                if result:
+                    product_id = result[0]
+                    logger.info(f"✅ 상품 DB 저장 완료: {product_name} (ID: {product_id})")
+                    return product_id
+                else:
+                    raise Exception("상품 저장 후 ID 조회 실패")
+                    
+        except Exception as e:
+            logger.error(f"❌ 상품 DB 저장 오류: {e}")
+            raise
+    
+    def _save_reviews_to_db(self, product_id: int, reviews: List[ReviewData]) -> int:
+        """reviews 테이블에 리뷰 저장 - 통합 방식"""
+        try:
+            db_path = settings.database_url.replace("sqlite:///", "")
+            saved_count = 0
+            
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                
+                for review in reviews:
+                    try:
+                        # UPSERT: 기존 리뷰가 있으면 업데이트, 없으면 삽입
+                        cursor.execute("""
+                            INSERT INTO reviews (
+                                product_id, review_id, content, rating, author, date, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                            ON CONFLICT(review_id) DO UPDATE SET
+                                content = excluded.content,
+                                rating = excluded.rating,
+                                author = excluded.author,
+                                date = excluded.date
+                        """, (
+                            product_id,
+                            review.review_id or f"review_{hash(review.content)}",
+                            review.content,
+                            review.rating,
+                            review.author,
+                            review.date
+                        ))
+                        saved_count += 1
+                        
+                    except sqlite3.IntegrityError as e:
+                        # 중복 리뷰는 무시
+                        logger.debug(f"중복 리뷰 스킵: {review.review_id}")
+                        continue
+                
+                conn.commit()
+                logger.info(f"✅ 리뷰 DB 저장 완료: {saved_count}개")
+                return saved_count
+                
+        except Exception as e:
+            logger.error(f"❌ 리뷰 DB 저장 오류: {e}")
+            raise 

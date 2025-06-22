@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../viewmodels/chat_viewmodel.dart';
 import '../widgets/chat_message_widget.dart';
@@ -14,6 +15,7 @@ class ChatScreen extends StatefulWidget {
   final String? productName;
   final String? productImage;
   final String? productPrice;
+  final VoidCallback? onBack; // 뒤로가기 콜백
 
   const ChatScreen({
     super.key,
@@ -21,6 +23,7 @@ class ChatScreen extends StatefulWidget {
     this.productName,
     this.productImage,
     this.productPrice,
+    this.onBack,
   });
 
   @override
@@ -62,86 +65,79 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
-      body: Consumer<ChatViewModel>(
-        builder: (context, viewModel, child) {
-          // 에러 상태 처리
-          if (viewModel.hasError) {
-            return CustomErrorWidget.general(
-              message: viewModel.errorMessage,
-              onRetry: () => viewModel.clearError(),
-            );
-          }
+    return Consumer<ChatViewModel>(
+      builder: (context, viewModel, child) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: Text(
+              viewModel.productName ?? '상품 채팅',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.onPrimary,
+            elevation: 0,
+            centerTitle: false,
+            leading:
+                widget.onBack != null
+                    ? IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: widget.onBack,
+                    )
+                    : null,
+          ),
+          body: Consumer<ChatViewModel>(
+            builder: (context, viewModel, child) {
+              // 에러 상태 처리
+              if (viewModel.hasError) {
+                return CustomErrorWidget.general(
+                  message: viewModel.errorMessage,
+                  onRetry: () => viewModel.clearError(),
+                );
+              }
 
-          return Column(
-            children: [
-              // 상품 정보 표시 (간소화)
-              if (viewModel.productName != null) _buildProductHeader(viewModel),
+              return Column(
+                children: [
+                  // 상품 정보 표시 (간소화)
+                  if (viewModel.productName != null)
+                    _buildProductHeader(viewModel),
 
-              // 채팅 메시지 영역
-              Expanded(
-                child: Column(
-                  children: [
-                    // 추천 질문 (메시지가 적을 때만 표시)
-                    if (viewModel.messages.length <= 1) ...[
-                      const SizedBox(height: 16),
-                      DefaultSuggestedQuestions(
-                        onQuestionSelected: (question) {
-                          viewModel.selectSuggestedQuestion(question);
-                          _scrollToBottom();
-                        },
-                        isLoading: viewModel.isLoading,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                  // 채팅 메시지 영역
+                  Expanded(
+                    child: Column(
+                      children: [
+                        // 추천 질문 (메시지가 적을 때만 표시)
+                        if (viewModel.messages.length <= 1) ...[
+                          const SizedBox(height: 16),
+                          DefaultSuggestedQuestions(
+                            onQuestionSelected: (question) {
+                              viewModel.selectSuggestedQuestion(question);
+                              _scrollToBottom();
+                            },
+                            isLoading: viewModel.isLoading,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
 
-                    // 환영 메시지 또는 채팅 메시지 목록
-                    Expanded(
-                      child:
-                          viewModel.messages.isEmpty
-                              ? _buildWelcomeMessage()
-                              : _buildMessageList(viewModel),
+                        // 환영 메시지 또는 채팅 메시지 목록
+                        Expanded(
+                          child:
+                              viewModel.messages.isEmpty
+                                  ? _buildWelcomeMessage()
+                                  : _buildMessageList(viewModel),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              // 채팅 입력 위젯
-              _buildChatInput(viewModel),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: Text(
-        'chat',
-        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-          color: AppColors.onPrimary,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.onPrimary,
-      elevation: 0,
-      centerTitle: false,
-      actions: [
-        Consumer<ChatViewModel>(
-          builder: (context, viewModel, child) {
-            return IconButton(
-              icon: const Icon(Icons.more_horiz),
-              onPressed: () {
-                _showClearChatDialog(context, viewModel);
-              },
-            );
-          },
-        ),
-      ],
+                  // 채팅 입력 위젯
+                  _buildChatInput(viewModel),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -186,7 +182,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   widget.productImage != null &&
                           widget.productImage!.trim().isNotEmpty
                       ? Image.network(
-                        'http://192.168.35.68:8000/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(widget.productImage!)}',
+                        '${ApiConstants.baseUrlSync}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(widget.productImage!)}',
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,

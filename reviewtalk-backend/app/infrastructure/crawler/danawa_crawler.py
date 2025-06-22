@@ -45,7 +45,7 @@ class DanawaCrawler:
         self.page = await context.new_page()
         
         # 타임아웃 설정
-        self.page.set_default_timeout(60000)  # 60초
+        self.page.set_default_timeout(30000)  # 30초로 축소 (기존 60초에서)
         
         return self
     
@@ -93,9 +93,9 @@ class DanawaCrawler:
         try:
             logger.info(f"🚀 모바일 상품 페이지 접근: {product_url}")
             
-            # 모바일 상품 페이지로 이동
-            await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=60000)
-            await asyncio.sleep(3)
+            # 모바일 상품 페이지로 이동 - 타임아웃 축소
+            await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(2)  # 3초에서 2초로 축소
             logger.info("✅ 모바일 상품 페이지 로드 완료")
             
             # 페이지 스크롤하여 콘텐츠 로드
@@ -133,8 +133,8 @@ class DanawaCrawler:
             # 상품 페이지로 이동 (아직 안했다면)
             current_url = self.page.url
             if current_url != product_url:
-                await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=60000)
-                await asyncio.sleep(3)
+                await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=30000)
+                await asyncio.sleep(2)  # 3초에서 2초로 축소
                 
             # 페이지 스크롤하여 모든 콘텐츠 로드
             await self._scroll_to_load_content()
@@ -313,7 +313,7 @@ class DanawaCrawler:
         # 기본적으로 30개 정도 보이므로, 추가로 필요한 만큼 더보기 클릭
         # 한 번 클릭할 때마다 약 30-50개씩 추가 로드됨
         estimated_clicks = max(1, (target_reviews - 30) // 30)
-        max_clicks = min(estimated_clicks + 2, 20)  # 최대 20번까지만 클릭 (안전장치)
+        max_clicks = min(estimated_clicks + 2, 10)  # 최대 10번까지만 클릭 (기존 20번에서 축소)
         
         logger.info(f"📊 예상 더보기 클릭 횟수: {estimated_clicks}, 최대 클릭 횟수: {max_clicks}")
         
@@ -328,7 +328,7 @@ class DanawaCrawler:
                         logger.info(f"✅ 더보기 버튼 {i+1}번째 클릭!")
                         await more_button.click()
                         click_count += 1
-                        await asyncio.sleep(3)  # 로딩 대기
+                        await asyncio.sleep(2)  # 3초에서 2초로 축소
                         
                         # 현재 로드된 리뷰 개수 확인
                         current_reviews = await self.page.query_selector_all('[id*="productBlog-opinion-mall-list-listItem-"]')

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/special_product_model.dart';
 import '../../../data/datasources/remote/special_deals_api.dart';
@@ -33,8 +34,19 @@ class ChatHistoryItem {
 /// 채팅 히스토리 화면 - 새로운 심플한 디자인
 class ChatHistoryScreen extends StatefulWidget {
   final VoidCallback? onUrlSelected;
+  final Function({
+    required String productId,
+    required String productName,
+    String? productImage,
+    String? productPrice,
+  })?
+  onChatRequested;
 
-  const ChatHistoryScreen({super.key, this.onUrlSelected});
+  const ChatHistoryScreen({
+    super.key,
+    this.onUrlSelected,
+    this.onChatRequested,
+  });
 
   @override
   State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
@@ -139,7 +151,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                       final chatItem = chatList[index];
                       return _ChatHistoryItem(
                         chatItem: chatItem,
-                        onTap: () => _onChatItemTap(context, chatItem),
+                        onTap: () => _onChatItemTap(chatItem),
                       );
                     },
                   ),
@@ -214,47 +226,51 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     }
   }
 
-  void _onChatItemTap(BuildContext context, ChatHistoryItem chatItem) {
-    if (chatItem.isFromUrl && chatItem.url != null) {
-      // 실제 URL 기록인 경우 - 홈 탭으로 이동
-      final viewModel = Provider.of<UrlInputViewModel>(context, listen: false);
-      viewModel.selectRecentUrl(chatItem.url!);
-      widget.onUrlSelected?.call();
-    } else if (chatItem.specialProduct != null) {
-      // 특가 상품인 경우 - 채팅 화면으로 이동
+  void _onChatItemTap(ChatHistoryItem chatItem) {
+    // 특가 상품인 경우
+    if (chatItem.specialProduct != null) {
       final product = chatItem.specialProduct!;
-      if (product.canChat) {
+
+      if (widget.onChatRequested != null) {
+        widget.onChatRequested!(
+          productId: product.productUrl,
+          productName: product.productName,
+          productImage: product.imageUrl,
+          productPrice: product.price,
+        );
+      } else {
+        // 폴백: 기존 방식으로 이동
         Navigator.of(context).push(
           MaterialPageRoute(
             builder:
                 (context) => ChatScreen(
-                  productId: product.productUrl, // productId 대신 productUrl 사용
+                  productId: product.productUrl,
                   productName: product.productName,
                   productImage: product.imageUrl,
                   productPrice: product.price,
                 ),
           ),
         );
-      } else {
-        // 리뷰 데이터가 준비되지 않은 경우
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product.shortName}의 리뷰 데이터가 아직 준비되지 않았습니다.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
       }
     } else {
       // 기타 경우 - 채팅 화면으로 이동 (기본 처리)
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder:
-              (context) => ChatScreen(
-                productId: chatItem.productName,
-                productName: chatItem.productName,
-              ),
-        ),
-      );
+      if (widget.onChatRequested != null) {
+        widget.onChatRequested!(
+          productId: chatItem.productName,
+          productName: chatItem.productName,
+        );
+      } else {
+        // 폴백: 기존 방식으로 이동
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder:
+                (context) => ChatScreen(
+                  productId: chatItem.productName,
+                  productName: chatItem.productName,
+                ),
+          ),
+        );
+      }
     }
   }
 
@@ -430,7 +446,7 @@ class _ChatHistoryItem extends StatelessWidget {
                         product?.imageUrl != null &&
                                 product!.imageUrl!.trim().isNotEmpty
                             ? Image.network(
-                              'http://192.168.35.68:8000/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
+                              '${ApiConstants.baseUrlSync}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
                               width: 80,
                               height: 80,
                               fit: BoxFit.cover,

@@ -237,3 +237,101 @@ class OverlayLoadingWidget extends StatelessWidget {
     );
   }
 }
+
+/// 하단 고정 크롤링 로딩바 위젯
+class BottomCrawlingLoadingWidget extends StatelessWidget {
+  final double progress;
+  final String statusMessage;
+  final VoidCallback? onCancel;
+
+  const BottomCrawlingLoadingWidget({
+    super.key,
+    required this.progress,
+    required this.statusMessage,
+    this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 상태 메시지
+            Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    value: progress > 0 ? progress : null,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    statusMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (onCancel != null)
+                  TextButton(
+                    onPressed: onCancel,
+                    child: Text(
+                      '중지',
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // 진행률 바
+            LinearProgressIndicator(
+              value: progress > 0 ? progress : null,
+              backgroundColor: AppColors.outline.withOpacity(0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              minHeight: 4,
+            ),
+            if (progress > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
