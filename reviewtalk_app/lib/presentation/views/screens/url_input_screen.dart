@@ -272,7 +272,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
               gradient: AppColors.mainGradient,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
+                  color: Colors.black.withValues(alpha: 0.25),
                   offset: const Offset(0, 4),
                   blurRadius: 4,
                 ),
@@ -343,7 +343,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                           Text(
                             '수집하는 리뷰가 많을수록 채팅은 정확하지만 리뷰수집 시간이 오래걸릴수있습니다',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
                             ),
@@ -448,7 +448,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -456,13 +456,13 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
               Icon(
                 Icons.local_offer,
                 size: 48,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
               const SizedBox(height: 16),
               Text(
                 '아직 특가 상품이 없습니다',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -471,7 +471,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
               Text(
                 '잠시 후 다시 확인해보세요',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                   fontSize: 14,
                 ),
               ),
@@ -534,7 +534,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -550,7 +550,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: ClipRRect(

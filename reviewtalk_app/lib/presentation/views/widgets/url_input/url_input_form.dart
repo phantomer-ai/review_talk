@@ -62,7 +62,7 @@ class UrlInputForm extends StatelessWidget {
           decoration: InputDecoration(
             hintText: AppStrings.urlInputPlaceholder,
             hintStyle: TextStyle(
-              color: AppColors.onSurfaceVariant.withOpacity(0.6),
+              color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
             ),
             prefixIcon: const Icon(Icons.link, color: AppColors.primary),
             suffixIcon:

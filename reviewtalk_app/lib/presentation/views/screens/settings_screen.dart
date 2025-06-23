@@ -89,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
             Container(
               width: 1,
               height: 40,
-              color: AppColors.outline.withOpacity(0.3),
+              color: AppColors.outline.withValues(alpha: 0.3),
             ),
             Expanded(
               child: Column(
@@ -198,7 +198,7 @@ class SettingsScreen extends StatelessWidget {
               Icon(
                 Icons.analytics_outlined,
                 size: 48,
-                color: AppColors.onSurfaceVariant.withOpacity(0.5),
+                color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 12),
               Text(

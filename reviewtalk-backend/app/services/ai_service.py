@@ -7,7 +7,7 @@ from app.infrastructure.ai.openai_client import get_openai_client
 from app.models.schemas import ReviewData
 from app.infrastructure.conversation_repository import ConversationRepository
 from app.infrastructure.chat_room_repository import ChatRoomRepository
-from app.infrastructure.product_repository import ProductRepository
+from app.infrastructure.unified_product_repository import unified_product_repository
 import asyncio
 import logging
 from app.utils.cache import ConversationCache
@@ -27,7 +27,7 @@ class AIService:
         self.openai_client = get_openai_client()
         self.conversation_repository = ConversationRepository()
         self.chat_room_repository = ChatRoomRepository()
-        self.product_repository = ProductRepository()
+        self.product_repository = unified_product_repository
 
     def process_and_store_reviews(
         self, 

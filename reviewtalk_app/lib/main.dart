@@ -109,7 +109,7 @@ class ReviewTalkApp extends StatelessWidget {
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: AppColors.surface,
-        surfaceTintColor: AppColors.primary.withOpacity(0.05),
+        surfaceTintColor: AppColors.primary.withValues(alpha: 0.05),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,

@@ -111,4 +111,18 @@ class ChatRoomRepository:
             conn.commit()
             return cursor.rowcount > 0
         finally:
+            conn.close()
+
+    def get_product_ids_by_user(self, user_id: str) -> List[str]:
+        """특정 사용자의 채팅방에서 사용된 모든 product_id 목록 조회"""
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT DISTINCT product_id FROM chat_room WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,)
+            )
+            rows = cursor.fetchall()
+            return [str(row[0]) for row in rows]
+        finally:
             conn.close() 

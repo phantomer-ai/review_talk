@@ -1,13 +1,45 @@
 """
 통합 상품 관리 API 엔드포인트
 """
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Depends, Query
 from typing import Dict, Any, List, Optional
+from pydantic import BaseModel
+from loguru import logger
 
 from app.services.crawl_product_review_service import CrawlProductReviewService
 from app.services.special_deals_manage_service import SpecialDealsManageService
-from app.infrastructure.product_repository import ProductRepository
+from app.infrastructure.unified_product_repository import unified_product_repository
+from app.infrastructure.chat_room_repository import ChatRoomRepository
 from app.models.schemas import CrawlRequest
+
+
+class Product(BaseModel):
+    """상품 정보 스키마"""
+    id: Optional[int] = None
+    product_id: str
+    product_name: str
+    product_url: str
+    image_url: Optional[str] = None
+    price: Optional[str] = None
+    original_price: Optional[str] = None
+    discount_rate: Optional[str] = None
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    rating: Optional[float] = None
+    review_count: int = 0
+    is_crawled: bool = False
+    is_special: bool = False
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class ProductStatistics(BaseModel):
+    """상품 통계 스키마"""
+    total_products: int
+    crawled_products: int
+    special_products: int
+    regular_products: int
+
 
 router = APIRouter(prefix="/api/v1/products", tags=["Products"])
 
@@ -22,9 +54,9 @@ def get_special_deals_service() -> SpecialDealsManageService:
     return SpecialDealsManageService()
 
 
-def get_product_repository() -> ProductRepository:
-    """상품 리포지토리 의존성 주입"""
-    return ProductRepository()
+def get_chat_room_repository() -> ChatRoomRepository:
+    """채팅방 리포지토리 의존성 주입"""
+    return ChatRoomRepository()
 
 
 @router.post("/crawl-reviews")
@@ -59,12 +91,11 @@ async def crawl_product_reviews(
 
 @router.get("/{product_id}")
 async def get_product(
-    product_id: str,
-    product_repo: ProductRepository = Depends(get_product_repository)
+    product_id: str
 ) -> Dict[str, Any]:
     """상품 정보 조회"""
     try:
-        product = product_repo.get_product_by_id(product_id)
+        product = unified_product_repository.get_product_by_id(product_id)
         
         if not product:
             raise HTTPException(
@@ -87,16 +118,59 @@ async def get_product(
 
 
 @router.get("/")
-async def get_products(
+async def get_user_products(
+    user_id: str = Query(..., description="사용자 ID"),
+    chat_room_repo: ChatRoomRepository = Depends(get_chat_room_repository)
+) -> Dict[str, Any]:
+    """사용자의 채팅방 기반 상품 목록 조회"""
+    try:
+        logger.info(f"사용자 {user_id}의 상품 목록 조회 시작")
+        
+        
+        # 1. 사용자의 채팅방에서 사용된 product_id 목록 조회
+        product_ids = chat_room_repo.get_product_ids_by_user(user_id)
+        
+        if not product_ids:
+            logger.info(f"사용자 {user_id}의 채팅방이 없습니다")
+            return {
+                "success": True,
+                "products": [],
+                "count": 0,
+                "message": "아직 채팅한 상품이 없습니다"
+            }
+        
+        logger.info(f"사용자 {user_id}의 product_id 목록: {product_ids}")
+        
+        # 2. product_id 목록으로 상품 정보 조회
+        products = unified_product_repository.get_products_by_ids(product_ids)
+        
+        logger.info(f"조회된 상품 수: {len(products)}")
+        
+        return {
+            "success": True,
+            "products": products,
+            "count": len(products),
+            "user_id": user_id
+        }
+        
+    except Exception as e:
+        logger.error(f"사용자 상품 목록 조회 중 오류 발생: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"상품 목록 조회 중 오류 발생: {str(e)}"
+        )
+
+
+@router.get("/list")
+async def get_products_list(
     limit: int = 10,
     special_only: bool = False,
-    crawled_only: bool = True,
-    product_repo: ProductRepository = Depends(get_product_repository)
+    crawled_only: bool = True
 ) -> Dict[str, Any]:
-    """상품 목록 조회"""
+    """전체 상품 목록 조회 (기존 기능)"""
     try:
         if special_only:
-            products = product_repo.get_special_products(limit, crawled_only)
+            products = unified_product_repository.get_special_products(limit, crawled_only)
         else:
             # 일반 상품 목록 조회 로직 (향후 구현)
             products = []
@@ -115,12 +189,10 @@ async def get_products(
 
 
 @router.get("/statistics/overview")
-async def get_product_statistics(
-    product_repo: ProductRepository = Depends(get_product_repository)
-) -> Dict[str, Any]:
+async def get_product_statistics() -> Dict[str, Any]:
     """상품 통계 정보"""
     try:
-        stats = product_repo.get_product_statistics()
+        stats = unified_product_repository.get_product_statistics()
         return {
             "success": True,
             "statistics": stats

@@ -123,7 +123,7 @@ def init_database():
                 cursor = conn.cursor()
                 
                 # 필요한 테이블들 확인
-                required_tables = ['user', 'products', 'chat_room', 'reviews', 'conversations']
+                required_tables = ['users', 'products', 'chat_room', 'reviews', 'conversations']
                 cursor.execute("""
                     SELECT name FROM sqlite_master 
                     WHERE type='table' AND name IN ({})

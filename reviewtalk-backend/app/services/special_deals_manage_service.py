@@ -11,7 +11,7 @@ from loguru import logger
 from pydantic import HttpUrl
 
 from app.infrastructure.crawler.special_deals_crawler import SpecialDealsCrawler
-from app.infrastructure.product_repository import ProductRepository
+from app.infrastructure.unified_product_repository import unified_product_repository
 from app.services.crawl_product_review_service import CrawlProductReviewService
 from app.models.schemas import CrawlRequest
 
@@ -21,7 +21,7 @@ class SpecialDealsManageService:
     
     def __init__(self):
         self.special_crawler = SpecialDealsCrawler()
-        self.product_repository = ProductRepository()
+        self.product_repository = unified_product_repository
         self.crawl_service = CrawlProductReviewService()
         self._scheduler_running = False
         self._scheduler_thread = None

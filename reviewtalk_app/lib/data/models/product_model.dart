@@ -1,47 +1,71 @@
 import 'package:equatable/equatable.dart';
 
-/// 상품 모델
+/// 통합 상품 모델 (일반 상품과 특가 상품 모두 지원)
 class ProductModel extends Equatable {
-  final String id;
+  final int? id;
+  final String productId;
   final String name;
   final String url;
   final String? imageUrl;
   final String? brand;
-  final double? price;
+  final String? price;
+  final String? originalPrice;
+  final String? discountRate;
   final String? category;
   final int reviewCount;
   final double? averageRating;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final bool isCrawled;
+  final bool isSpecial;
+  final String? createdAt;
+  final String? updatedAt;
 
   const ProductModel({
-    required this.id,
+    this.id,
+    required this.productId,
     required this.name,
     required this.url,
     this.imageUrl,
     this.brand,
     this.price,
+    this.originalPrice,
+    this.discountRate,
     this.category,
     this.reviewCount = 0,
     this.averageRating,
-    required this.createdAt,
-    required this.updatedAt,
+    this.isCrawled = false,
+    this.isSpecial = false,
+    this.createdAt,
+    this.updatedAt,
   });
 
   /// JSON에서 객체로 변환
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    // is_crawled, is_special 필드를 안전하게 bool 타입으로 변환하는 로컬 함수
+    bool toBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is int) return value == 1;
+      if (value is String) return value.toLowerCase() == 'true' || value == '1';
+      return false; // 기본값은 false
+    }
+
     return ProductModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      url: json['url'] as String,
+      id: json['id'] as int?,
+      productId: json['product_id'] as String,
+      name: json['product_name'] as String? ?? json['name'] as String? ?? '상품명 없음',
+      url: json['product_url'] as String? ?? json['url'] as String? ?? '', // URL은 null일 수 없음
       imageUrl: json['image_url'] as String?,
       brand: json['brand'] as String?,
-      price: (json['price'] as num?)?.toDouble(),
+      price: json['price'] as String?,
+      originalPrice: json['original_price'] as String?,
+      discountRate: json['discount_rate'] as String?,
       category: json['category'] as String?,
-      reviewCount: json['review_count'] as int? ?? 0,
-      averageRating: (json['average_rating'] as num?)?.toDouble(),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
+      averageRating:
+      json['rating'] != null ? (json['rating'] as num).toDouble() : null,
+      isCrawled: toBool(json['is_crawled']),
+      isSpecial: toBool(json['is_special']),
+      createdAt: json['created_at'] as String?,
+      updatedAt: json['updated_at'] as String?,
     );
   }
 
@@ -49,129 +73,78 @@ class ProductModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
-      'url': url,
+      'product_id': productId,
+      'product_name': name,
+      'product_url': url,
       'image_url': imageUrl,
       'brand': brand,
       'price': price,
+      'original_price': originalPrice,
+      'discount_rate': discountRate,
       'category': category,
       'review_count': reviewCount,
-      'average_rating': averageRating,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'rating': averageRating,
+      'is_crawled': isCrawled,
+      'is_special': isSpecial,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     };
   }
 
-  /// 복사본 생성
-  ProductModel copyWith({
-    String? id,
-    String? name,
-    String? url,
-    String? imageUrl,
-    String? brand,
-    double? price,
-    String? category,
-    int? reviewCount,
-    double? averageRating,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return ProductModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      url: url ?? this.url,
-      imageUrl: imageUrl ?? this.imageUrl,
-      brand: brand ?? this.brand,
-      price: price ?? this.price,
-      category: category ?? this.category,
-      reviewCount: reviewCount ?? this.reviewCount,
-      averageRating: averageRating ?? this.averageRating,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
+  // 기존 인터페이스 호환성을 위한 getter들
+  String get productIcon => name.isNotEmpty ? name[0] : '🛒';
+  String get shortName {
+    final maxLength = 25;
+    if (name.length > maxLength) {
+      return '${name.substring(0, maxLength)}...';
+    }
+    return name;
   }
+
+  String get chatStatusMessage {
+    if (reviewCount > 0) {
+      return '리뷰 $reviewCount개 분석 완료';
+    }
+    return '리뷰 분석 준비 중';
+  }
+
+  String get relativeTime {
+    if (createdAt == null) return '시간 정보 없음';
+    try {
+      final createdDate = DateTime.parse(createdAt!);
+      final difference = DateTime.now().difference(createdDate);
+
+      if (difference.inDays > 7) {
+        return '${createdDate.year}.${createdDate.month}.${createdDate.day}';
+      }
+      if (difference.inDays > 0) return '${difference.inDays}일 전';
+      if (difference.inHours > 0) return '${difference.inHours}시간 전';
+      if (difference.inMinutes > 0) return '${difference.inMinutes}분 전';
+      return '방금 전';
+    } catch (e) {
+      return '시간 정보 오류';
+    }
+  }
+
+  bool get canChat => isCrawled && reviewCount > 0;
 
   @override
   List<Object?> get props => [
     id,
+    productId,
     name,
     url,
     imageUrl,
     brand,
     price,
+    originalPrice,
+    discountRate,
     category,
     reviewCount,
     averageRating,
+    isCrawled,
+    isSpecial,
     createdAt,
     updatedAt,
   ];
-
-  @override
-  String toString() {
-    return 'ProductModel(id: $id, name: $name, brand: $brand, reviewCount: $reviewCount)';
-  }
-}
-
-/// 상품 검색/목록 응답 모델
-class ProductListResponseModel extends Equatable {
-  final bool success;
-  final List<ProductModel> products;
-  final int totalCount;
-  final int page;
-  final int limit;
-  final String? message;
-
-  const ProductListResponseModel({
-    required this.success,
-    required this.products,
-    required this.totalCount,
-    this.page = 1,
-    this.limit = 20,
-    this.message,
-  });
-
-  /// JSON에서 객체로 변환
-  factory ProductListResponseModel.fromJson(Map<String, dynamic> json) {
-    return ProductListResponseModel(
-      success: json['success'] as bool,
-      products:
-          (json['products'] as List<dynamic>)
-              .map(
-                (productJson) =>
-                    ProductModel.fromJson(productJson as Map<String, dynamic>),
-              )
-              .toList(),
-      totalCount: json['total_count'] as int,
-      page: json['page'] as int? ?? 1,
-      limit: json['limit'] as int? ?? 20,
-      message: json['message'] as String?,
-    );
-  }
-
-  /// 객체를 JSON으로 변환
-  Map<String, dynamic> toJson() {
-    return {
-      'success': success,
-      'products': products.map((product) => product.toJson()).toList(),
-      'total_count': totalCount,
-      'page': page,
-      'limit': limit,
-      'message': message,
-    };
-  }
-
-  @override
-  List<Object?> get props => [
-    success,
-    products,
-    totalCount,
-    page,
-    limit,
-    message,
-  ];
-
-  @override
-  String toString() {
-    return 'ProductListResponseModel(success: $success, productsCount: ${products.length}, totalCount: $totalCount)';
-  }
 }

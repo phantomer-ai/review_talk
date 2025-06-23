@@ -160,13 +160,13 @@ class _ChatScreenState extends State<ChatScreen> {
         color: Colors.white,
         border: Border(
           bottom: BorderSide(
-            color: AppColors.outline.withOpacity(0.2),
+            color: AppColors.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -179,7 +179,7 @@ class _ChatScreenState extends State<ChatScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: ClipRRect(
@@ -234,7 +234,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       : Container(
                         width: 60,
                         height: 60,
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         child: Icon(
                           Icons.shopping_bag,
                           size: 24,
@@ -287,7 +287,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Icon(
               Icons.chat_bubble_outline,
               size: 64,
-              color: AppColors.primary.withOpacity(0.3),
+              color: AppColors.primary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -334,7 +334,10 @@ class _ChatScreenState extends State<ChatScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(
-          top: BorderSide(color: AppColors.outline.withOpacity(0.2), width: 1),
+          top: BorderSide(
+            color: AppColors.outline.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
       ),
       child: SafeArea(

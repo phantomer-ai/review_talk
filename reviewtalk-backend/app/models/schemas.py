@@ -62,6 +62,7 @@ class SpecialProduct(BaseModel):
     rating: Optional[float] = Field(None, description="평균 평점")
     review_count: int = Field(default=0, description="리뷰 수")
     is_crawled: bool = Field(default=False, description="리뷰 크롤링 완료 여부")
+    is_special: bool = Field(default=True, description="특가 상품 여부")
     created_at: Optional[str] = Field(None, description="등록 시간")
     updated_at: Optional[str] = Field(None, description="업데이트 시간")
 

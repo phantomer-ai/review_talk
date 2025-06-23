@@ -130,12 +130,17 @@ class DanawaCrawler:
         try:
             logger.info(f"🔍 상품 정보 추출 시작: {product_url}")
             
+            # self.page가 None인지 확인
+            if not self.page:
+                logger.error("❌ 브라우저 페이지가 초기화되지 않았습니다.")
+                return product_info
+            
             # 상품 페이지로 이동 (아직 안했다면)
             current_url = self.page.url
             if current_url != product_url:
                 await self.page.goto(str(product_url), wait_until='domcontentloaded', timeout=60000)
                 await asyncio.sleep(3)
-                
+            
             # 페이지 스크롤하여 모든 콘텐츠 로드
             await self._scroll_to_load_content()
             

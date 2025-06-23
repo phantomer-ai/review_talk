@@ -13,7 +13,7 @@ from app.models.schemas import (
     CrawlSpecialProductsRequest,
     CrawlSpecialProductsResponse
 )
-from app.infrastructure.special_product_repository import special_product_repository
+from app.infrastructure.unified_product_repository import unified_product_repository
 from app.infrastructure.crawler.special_deals_crawler import crawl_special_deals
 from app.infrastructure.crawler.danawa_crawler import crawl_danawa_reviews
 from app.infrastructure.ai.vector_store import get_vector_store
@@ -24,7 +24,7 @@ class SpecialDealsService:
     """특가 상품 서비스"""
     
     def __init__(self):
-        self.repository = special_product_repository
+        self.repository = unified_product_repository
     
     async def crawl_and_save_special_deals(
         self, 
@@ -158,7 +158,7 @@ class SpecialDealsService:
     def get_special_products(self, limit: int = 50, offset: int = 0) -> SpecialProductsResponse:
         """특가 상품 목록 조회"""
         try:
-            products = self.repository.get_special_products(limit, offset)
+            products = self.repository.get_special_products_as_models(limit, offset)
             total_count = self.repository.get_total_count()
             
             return SpecialProductsResponse(

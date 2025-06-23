@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from loguru import logger
 
 from app.infrastructure.crawler.danawa_crawler import DanawaCrawler
-from app.infrastructure.product_repository import ProductRepository
+from app.infrastructure.unified_product_repository import unified_product_repository
 from app.infrastructure.ai.vector_store import VectorStore
 from app.models.schemas import CrawlRequest, CrawlResponse
 
@@ -18,7 +18,7 @@ class CrawlProductReviewService:
     
     def __init__(self):
         self.crawler = DanawaCrawler()
-        self.product_repository = ProductRepository()
+        self.product_repository = unified_product_repository
         self.vector_store = VectorStore()
     
     async def crawl_product_reviews(self, request: CrawlRequest) -> CrawlResponse:
