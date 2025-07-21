@@ -1,14 +1,25 @@
 import '../../data/models/chat_model.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/usecases/send_message.dart';
+import '../../domain/usecases/get_chat_history.dart';
+import '../../domain/repositories/chat_repository.dart';
+import '../../core/utils/user_id_manager.dart';
+import '../../core/utils/app_logger.dart';
 import 'base_viewmodel.dart';
 
 /// 채팅 화면 ViewModel
 class ChatViewModel extends BaseViewModel {
   final SendMessage _sendMessage;
+  final GetChatHistory _getChatHistory;
+  final ChatRepository _chatRepository;
 
-  ChatViewModel({required SendMessage sendMessage})
-    : _sendMessage = sendMessage;
+  ChatViewModel({
+    required SendMessage sendMessage,
+    required GetChatHistory getChatHistory,
+    required ChatRepository chatRepository,
+  }) : _sendMessage = sendMessage,
+       _getChatHistory = getChatHistory,
+       _chatRepository = chatRepository;
 
   // 현재 상품 정보
   String? _productId;
@@ -41,25 +52,59 @@ class ChatViewModel extends BaseViewModel {
   // 채팅이 처음 시작되었는지 여부
   bool get isFirstMessage => _messages.isEmpty;
 
-  /// 채팅 초기화 (상품 정보 설정)
-  void initializeChat({
+  /// 채팅 초기화 (상품 정보 설정 및 기록 로드)
+  Future<void> initializeChat({
     required String productId,
     required String productName,
-  }) {
+  }) async {
     _productId = productId;
     _productName = productName;
     _messages.clear();
     clearAllMessages();
 
-    // 환영 메시지 추가
-    final welcomeMessage = ChatMessage.ai(
-      content:
-          '안녕하세요! $_productName에 대해 궁금한 점을 물어보세요. '
-          '실제 구매자들의 리뷰를 분석해서 답변드릴게요! 😊',
-    );
+    // 기존 채팅 기록 로드 시도
+    await _loadChatHistory();
 
-    _messages.add(welcomeMessage);
+    // 기록이 없으면 환영 메시지 추가
+    if (_messages.isEmpty) {
+      final welcomeMessage = ChatMessage.ai(
+        content:
+            '안녕하세요! $_productName에 대해 궁금한 점을 물어보세요. '
+            '실제 구매자들의 리뷰를 분석해서 답변드릴게요! 😊',
+      );
+
+      _messages.add(welcomeMessage);
+    }
+
     notifyListeners();
+  }
+
+  /// 채팅 기록 로드
+  Future<void> _loadChatHistory() async {
+    if (_productId == null) return;
+
+    try {
+      final userId = await UserIdManager().getUserId();
+      final params = GetChatHistoryParams(
+        userId: userId,
+        productId: _productId,
+        limit: 50, // 최근 50개 메시지
+      );
+
+      final history = await _getChatHistory(params);
+      
+      if (history.isNotEmpty) {
+        _messages.addAll(history);
+        // 채팅 기록이 있으면 상태 메시지 추가
+        final resumeMessage = ChatMessage.ai(
+          content: '이전 대화를 불러왔습니다. 계속해서 질문해주세요! 😊',
+        );
+        _messages.add(resumeMessage);
+      }
+    } catch (e) {
+      // 기록 로드 실패 시 로그만 남기고 계속 진행
+      AppLogger.e('[ChatViewModel] 채팅 기록 로드 실패', e);
+    }
   }
 
   /// 메시지 입력 텍스트 업데이트
@@ -144,10 +189,22 @@ class ChatViewModel extends BaseViewModel {
     await sendMessage(message.content);
   }
 
+  /// productId 명시적 초기화 (chat 화면 벗어날 때 호출)
+  void clearProductId() {
+    _productId = null;
+    _productName = null;
+    notifyListeners();
+  }
+
   /// 채팅 기록 삭제
-  void clearChat() {
+  Future<void> clearChat() async {
     _messages.clear();
     clearAllMessages();
+
+    // Repository의 캐시도 정리
+    if (_productId != null) {
+      await _chatRepository.clearChatHistory(productId: _productId);
+    }
 
     if (_productName != null) {
       // 환영 메시지 다시 추가
@@ -163,6 +220,12 @@ class ChatViewModel extends BaseViewModel {
   /// 메시지 추가
   void _addMessage(ChatMessage message) {
     _messages.add(message);
+    
+    // Repository 캐시에도 메시지 저장 (비동기이지만 UI 업데이트와 분리)
+    _chatRepository.saveMessage(message).catchError((e) {
+      AppLogger.e('[ChatViewModel] 메시지 캐시 저장 실패', e);
+    });
+    
     notifyListeners();
   }
 

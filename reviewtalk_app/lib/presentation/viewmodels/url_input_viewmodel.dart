@@ -1,14 +1,18 @@
-import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/review_model.dart';
 import '../../domain/usecases/crawl_reviews.dart';
 import 'base_viewmodel.dart';
+import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// URL 입력 화면 ViewModel
 class UrlInputViewModel extends BaseViewModel {
   final CrawlReviews _crawlReviews;
   final SharedPreferences _prefs;
+
+  // 임시 productId 상태 추가
+  String? _productId;
+  String? get productId => _productId;
 
   UrlInputViewModel({
     required CrawlReviews crawlReviews,
@@ -41,15 +45,27 @@ class UrlInputViewModel extends BaseViewModel {
   CrawlReviewsResponseModel? _crawlResult;
   CrawlReviewsResponseModel? get crawlResult => _crawlResult;
 
-  // 크롤링 취소용 Completer
-  Completer<void>? _cancelCompleter;
-  bool _isCancelled = false;
-  bool get isCancelled => _isCancelled;
-
   /// URL 설정
   void setUrl(String url) {
     _currentUrl = url.trim();
+    _productId = _extractPcode(_currentUrl); // pcode 추출 및 저장
     notifyListeners();
+  }
+
+  // pcode 추출 함수
+  String? _extractPcode(String url) {
+    final patterns = [
+      RegExp(r'pcode=(\d+)'),
+      RegExp(r'productSeq=(\d+)'),
+      RegExp(r'code=(\d+)'),
+    ];
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(url);
+      if (match != null) {
+        return match.group(1);
+      }
+    }
+    return null;
   }
 
   /// 최대 리뷰 수 설정 (UI 제한: 최대 300개)
@@ -71,7 +87,7 @@ class UrlInputViewModel extends BaseViewModel {
       'danawa.com/product',
       'danawa.page.link',
     ];
-
+    
     return danawaPatterns.any((pattern) => _currentUrl.contains(pattern));
   }
 
@@ -95,18 +111,12 @@ class UrlInputViewModel extends BaseViewModel {
       return false;
     }
 
-    // 취소 상태 초기화
-    _isCancelled = false;
-    _cancelCompleter = Completer<void>();
+    // 크롤링 시작 전 productId 갱신
+    _productId = _extractPcode(_currentUrl);
 
     final result = await executeWithLoading<CrawlReviewsResponseModel>(
       () async {
         _updateCrawlProgress(0.1, '리뷰 수집을 준비하고 있습니다...');
-
-        // 취소 확인
-        if (_isCancelled) {
-          throw Exception('사용자가 크롤링을 취소했습니다.');
-        }
 
         final params = CrawlReviewsParams(
           productUrl: _currentUrl,
@@ -115,11 +125,6 @@ class UrlInputViewModel extends BaseViewModel {
 
         _updateCrawlProgress(0.3, '상품 정보를 가져오고 있습니다...');
 
-        // 취소 확인
-        if (_isCancelled) {
-          throw Exception('사용자가 크롤링을 취소했습니다.');
-        }
-
         final result = await _crawlReviews(params);
 
         return result.fold(
@@ -127,11 +132,6 @@ class UrlInputViewModel extends BaseViewModel {
             throw Exception(failure.message);
           },
           (success) {
-            // 취소 확인
-            if (_isCancelled) {
-              throw Exception('사용자가 크롤링을 취소했습니다.');
-            }
-
             _updateCrawlProgress(0.8, '리뷰 분석을 완료하고 있습니다...');
             return success;
           },
@@ -141,7 +141,7 @@ class UrlInputViewModel extends BaseViewModel {
       successMessage: '$_maxReviews개의 리뷰를 성공적으로 수집했습니다!',
     );
 
-    if (result != null && !_isCancelled) {
+    if (result != null) {
       _crawlResult = result;
       _updateCrawlProgress(1.0, '완료!');
       await _saveToRecentUrls(_currentUrl);
@@ -151,22 +151,8 @@ class UrlInputViewModel extends BaseViewModel {
     return false;
   }
 
-  /// 크롤링 취소
-  void cancelCrawling() {
-    _isCancelled = true;
-    if (_cancelCompleter != null && !_cancelCompleter!.isCompleted) {
-      _cancelCompleter!.complete();
-    }
-
-    // 상태 초기화
-    resetCrawlState();
-    setSuccess('크롤링이 취소되었습니다.');
-  }
-
   /// 크롤링 진행 상태 업데이트
   void _updateCrawlProgress(double progress, String message) {
-    if (_isCancelled) return; // 취소된 경우 업데이트 중단
-
     _crawlProgress = progress;
     _crawlStatusMessage = message;
     notifyListeners();
@@ -212,8 +198,7 @@ class UrlInputViewModel extends BaseViewModel {
     _crawlProgress = 0.0;
     _crawlStatusMessage = '';
     _crawlResult = null;
-    _isCancelled = false;
-    _cancelCompleter = null;
+    _productId = null; // productId 초기화
     clearAllMessages();
   }
 }

@@ -87,7 +87,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             gradient: AppColors.mainGradient,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
+                color: Colors.black.withValues(alpha: 0.25),
                 offset: const Offset(0, 4),
                 blurRadius: 4,
               ),
@@ -128,7 +128,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                             ? viewModel.crawlStatusMessage
                             : '상품 리뷰를 분석하고 있어요...',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -144,9 +144,9 @@ class _LoadingScreenState extends State<LoadingScreen>
                             viewModel.crawlProgress > 0
                                 ? viewModel.crawlProgress
                                 : null,
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withOpacity(0.8),
+                          Colors.white.withValues(alpha: 0.8),
                         ),
                         minHeight: 3,
                       ),
@@ -157,7 +157,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                       Text(
                         '${(viewModel.crawlProgress * 100).toInt()}%',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -181,14 +181,17 @@ class _LoadingScreenState extends State<LoadingScreen>
         height: 60,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 3,
+          ),
         ),
         child: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [Colors.white, Colors.white.withOpacity(0.1)],
+              colors: [Colors.white, Colors.white.withValues(alpha: 0.1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

@@ -6,6 +6,8 @@ from pydantic import BaseModel, HttpUrl, Field
 class CrawlRequest(BaseModel):
     product_url: HttpUrl = Field(..., description="다나와 상품 URL")
     max_reviews: int = Field(default=100, ge=1, le=1000, description="수집할 최대 리뷰 수")
+    is_special: bool = Field(default=False, description="특가 상품 여부")
+    user_id: Optional[str] = Field(None, description="사용자 ID")
 
 
 class ReviewData(BaseModel):
@@ -18,18 +20,16 @@ class ReviewData(BaseModel):
 
 class CrawlResponse(BaseModel):
     success: bool = Field(..., description="크롤링 성공 여부")
-    product_id: str = Field(..., description="상품 고유 ID")
-    product_name: str = Field(..., description="상품명")
-    product_image: Optional[str] = Field(None, description="상품 이미지 URL")
-    product_price: Optional[str] = Field(None, description="상품 가격")
-    product_brand: Optional[str] = Field(None, description="상품 브랜드")
-    total_reviews: int = Field(..., description="수집된 리뷰 수")
-    reviews: List[ReviewData] = Field(..., description="리뷰 목록")
+    message: str = Field(..., description="처리 결과 메시지")
+    reviews_found: int = Field(default=0, description="발견된 리뷰 수")
+    product_id: Optional[str] = Field(None, description="상품 고유 ID")
+    product_info: Optional[dict] = Field(None, description="상품 상세 정보")
     error_message: Optional[str] = Field(None, description="에러 메시지")
 
 
 # AI 채팅 관련 스키마
 class ChatRequest(BaseModel):
+    user_id: str = Field(..., description="사용자 ID")
     product_id: Optional[str] = Field(None, description="상품 ID (없으면 전체 리뷰에서 검색)")
     question: str = Field(..., min_length=1, max_length=500, description="사용자 질문")
 
@@ -62,6 +62,7 @@ class SpecialProduct(BaseModel):
     rating: Optional[float] = Field(None, description="평균 평점")
     review_count: int = Field(default=0, description="리뷰 수")
     is_crawled: bool = Field(default=False, description="리뷰 크롤링 완료 여부")
+    is_special: bool = Field(default=True, description="특가 상품 여부")
     created_at: Optional[str] = Field(None, description="등록 시간")
     updated_at: Optional[str] = Field(None, description="업데이트 시간")
 
@@ -91,4 +92,20 @@ class CrawlSpecialProductsResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     app_name: str
-    version: str 
+    version: str
+
+
+# 채팅방(chat_room) 관련 스키마
+class ChatRoomBase(BaseModel):
+    user_id: str = Field(..., description="채팅방 소유자(사용자) ID")
+    product_id: int = Field(..., description="상품 ID")
+
+class ChatRoomCreate(ChatRoomBase):
+    pass
+
+class ChatRoomRead(ChatRoomBase):
+    id: int = Field(..., description="채팅방 고유 ID")
+    created_at: str = Field(..., description="생성일시")
+
+class ChatRoomListResponse(BaseModel):
+    chat_rooms: list[ChatRoomRead] = Field(..., description="채팅방 목록") 

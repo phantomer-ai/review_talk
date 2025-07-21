@@ -12,6 +12,10 @@ from app.core.config import settings
 from app.models.schemas import ReviewData
 from loguru import logger
 
+from urllib.parse import urlparse, parse_qs
+from typing import Optional
+from app.utils.url_utils import extract_product_id
+
 
 class CustomEmbeddingFunction(EmbeddingFunction):
     """ChromaDB v0.4.16+ 호환 커스텀 임베딩 함수"""
@@ -64,7 +68,7 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"}
         )
     
-    def add_reviews(self, reviews: List[ReviewData], product_url: str, product_info: Dict[str, Any] = None) -> None:
+    def add_reviews(self, reviews: List[ReviewData], product_id: str, product_info: Dict[str, Any] = None) -> None:
         """리뷰 데이터를 벡터 저장소에 추가"""
         try:
             documents = []
@@ -77,7 +81,7 @@ class VectorStore:
                 
                 # None 값들을 적절한 기본값으로 변환
                 metadata = {
-                    "product_url": product_url or "unknown",
+                    "product_id" : product_id,
                     "rating": int(review.rating) if review.rating is not None else 0,
                     "date": review.date or "unknown",
                     "review_id": review.review_id or str(uuid.uuid4()),
@@ -92,11 +96,14 @@ class VectorStore:
                         "product_price": product_info.get("product_price", ""),
                         "product_brand": product_info.get("product_brand", "")
                     })
-                
+
                 documents.append(document)
                 metadatas.append(metadata)
                 ids.append(f"review_{metadata['review_id']}")
-            
+
+            logger.info(f"metas : [{metadatas}]")
+
+
             # ChromaDB에 추가
             self.collection.add(
                 documents=documents,
@@ -113,17 +120,21 @@ class VectorStore:
     
     def search_similar_reviews(
         self, 
-        query: str, 
-        n_results: int = 10,
-        product_url: Optional[str] = None
+        query: str,
+            n_results: int = 10,
+        product_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """유사한 리뷰 검색"""
         try:
+
+            product_id_int = int(product_id) if product_id is not None else None
+
             # 검색 필터 설정
             where_filter = {}
-            if product_url:
-                where_filter["product_url"] = product_url
+            if product_id:
+                where_filter["product_id"] = product_id_int
             
+            logger.info(f"✅ product_id : {product_id_int} ")
             # 벡터 검색 수행
             results = self.collection.query(
                 query_texts=[query],

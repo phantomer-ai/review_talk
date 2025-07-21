@@ -1,88 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/api_constants.dart';
-import '../../../core/constants/app_strings.dart';
-import '../../../data/models/special_product_model.dart';
-import '../../../data/datasources/remote/special_deals_api.dart';
+import '../../../data/models/product_model.dart';
+import '../../../data/datasources/remote/products_api.dart';
 import '../../viewmodels/url_input_viewmodel.dart';
 import 'chat_screen.dart';
+import '../../../core/constants/api_constants.dart';
 
-/// 채팅 기록 아이템 모델
+/// 채팅 기록 아이템 모델 (ProductModel 기반)
 class ChatHistoryItem {
-  final String productIcon;
-  final String productName;
-  final String lastMessage;
-  final String timeAgo;
-  final int messageCount;
+  final ProductModel product;
   final bool isFromUrl;
   final String? url;
-  final SpecialProductModel? specialProduct; // 특가 상품 데이터 추가
 
-  ChatHistoryItem({
-    required this.productIcon,
-    required this.productName,
-    required this.lastMessage,
-    required this.timeAgo,
-    required this.messageCount,
-    required this.isFromUrl,
-    this.url,
-    this.specialProduct,
-  });
+  ChatHistoryItem({required this.product, this.isFromUrl = false, this.url});
+
+  // 기존 인터페이스 호환성을 위한 getter들
+  String get productIcon => product.productIcon;
+  String get productName => product.shortName;
+  String get lastMessage => product.chatStatusMessage;
+  String get timeAgo => product.relativeTime;
+  int get messageCount => product.reviewCount;
 }
 
 /// 채팅 히스토리 화면 - 새로운 심플한 디자인
 class ChatHistoryScreen extends StatefulWidget {
   final VoidCallback? onUrlSelected;
-  final Function({
-    required String productId,
-    required String productName,
-    String? productImage,
-    String? productPrice,
-  })?
-  onChatRequested;
 
-  const ChatHistoryScreen({
-    super.key,
-    this.onUrlSelected,
-    this.onChatRequested,
-  });
+  const ChatHistoryScreen({super.key, this.onUrlSelected});
 
   @override
   State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
 }
 
 class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
-  List<SpecialProductModel> _specialDeals = [];
-  bool _isLoadingDeals = false;
+  List<ProductModel> _allProducts = [];
+  bool _isLoadingProducts = false;
+  final ProductsApi _productsApi = ProductsApi();
 
   @override
   void initState() {
     super.initState();
-    _loadSpecialDeals();
+    _loadAllProducts();
   }
 
-  /// 특가 상품 데이터 로드
-  Future<void> _loadSpecialDeals() async {
+  /// 통합 상품 데이터 로드 (사용자 채팅 상품 + 특가 상품)
+  Future<void> _loadAllProducts() async {
     if (!mounted) return;
 
     setState(() {
-      _isLoadingDeals = true;
+      _isLoadingProducts = true;
     });
 
     try {
-      final deals = await SpecialDealsApi.getSpecialDeals(limit: 6);
+      final products = await _productsApi.getCombinedProducts(
+        specialDealsLimit: 6,
+        onlySpecialCrawled: true,
+      );
+
       if (mounted) {
         setState(() {
-          _specialDeals = deals;
-          _isLoadingDeals = false;
+          _allProducts = products;
+          _isLoadingProducts = false;
         });
       }
     } catch (e) {
-      print('특가 상품 로드 오류: $e');
+      print('상품 데이터 로드 오류: $e');
       if (mounted) {
         setState(() {
-          _isLoadingDeals = false;
+          _isLoadingProducts = false;
         });
       }
     }
@@ -106,7 +92,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
             Text(
               '💬 최근 채팅 기록',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.onPrimary.withOpacity(0.8),
+                color: AppColors.onPrimary.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -132,11 +118,21 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
       ),
       body: Consumer<UrlInputViewModel>(
         builder: (context, viewModel, child) {
-          // 더미 채팅 데이터 + 실제 URL 기록 조합
+          // 로딩 중이면 로딩 인디케이터 표시
+          if (_isLoadingProducts) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // 실제 API 데이터 + URL 기록 조합
           final chatList = _buildChatList(viewModel.recentUrls);
 
           if (chatList.isEmpty) {
-            return const _EmptyHistoryView();
+            return Column(
+              children: [
+                Expanded(child: const _EmptyHistoryView()),
+                _buildNewAnalysisButton(context),
+              ],
+            );
           }
 
           return Column(
@@ -144,16 +140,19 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
               Expanded(
                 child: Container(
                   color: Colors.grey.shade50,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    itemCount: chatList.length,
-                    itemBuilder: (context, index) {
-                      final chatItem = chatList[index];
-                      return _ChatHistoryItem(
-                        chatItem: chatItem,
-                        onTap: () => _onChatItemTap(chatItem),
-                      );
-                    },
+                  child: RefreshIndicator(
+                    onRefresh: _loadAllProducts,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      itemCount: chatList.length,
+                      itemBuilder: (context, index) {
+                        final chatItem = chatList[index];
+                        return _ChatHistoryItem(
+                          chatItem: chatItem,
+                          onTap: () => _onChatItemTap(context, chatItem),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -165,109 +164,70 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     );
   }
 
-  // 실제 특가 상품 데이터와 URL 기록을 조합한 채팅 목록 생성
+  // 실제 API 데이터와 URL 기록을 조합한 채팅 목록 생성
   List<ChatHistoryItem> _buildChatList(List<String> recentUrls) {
-    // 특가 상품 데이터를 채팅 아이템으로 변환
-    final specialDealsChatList =
-        _specialDeals.map((product) {
-          return ChatHistoryItem(
-            productIcon: '🏷️', // 특가 상품 아이콘
-            productName: product.shortName,
-            lastMessage:
-                product.canChat ? '리뷰 분석 완료! 궁금한 점을 물어보세요' : '리뷰 데이터 수집 중...',
-            timeAgo: _getRelativeTime(product.createdAt),
-            messageCount: product.reviewCount,
-            isFromUrl: false,
-            specialProduct: product,
-          );
-        }).toList();
+    final chatList = <ChatHistoryItem>[];
 
-    // 실제 URL 기록을 채팅 아이템으로 변환
-    final urlChatList =
-        recentUrls.map((url) {
-          final productCode = _extractProductCode(url);
-          return ChatHistoryItem(
-            productIcon: '🛍️',
-            productName: productCode != null ? '상품 $productCode' : '분석된 상품',
-            lastMessage: '분석이 완료되었습니다',
-            timeAgo: '방금 전',
-            messageCount: 1,
-            isFromUrl: true,
-            url: url,
-          );
-        }).toList();
-
-    // URL 기록 + 특가 상품 데이터 조합
-    return [...urlChatList, ...specialDealsChatList];
-  }
-
-  // 상대적 시간 계산
-  String _getRelativeTime(String? createdAt) {
-    if (createdAt == null) return '알 수 없음';
-
-    try {
-      final created = DateTime.parse(createdAt);
-      final now = DateTime.now();
-      final difference = now.difference(created);
-
-      if (difference.inMinutes < 1) {
-        return '방금 전';
-      } else if (difference.inHours < 1) {
-        return '${difference.inMinutes}분 전';
-      } else if (difference.inDays < 1) {
-        return '${difference.inHours}시간 전';
-      } else if (difference.inDays < 7) {
-        return '${difference.inDays}일 전';
-      } else {
-        return '1주일 전';
-      }
-    } catch (e) {
-      return '알 수 없음';
+    // 1. 실제 상품 데이터를 채팅 아이템으로 변환
+    for (final product in _allProducts) {
+      chatList.add(ChatHistoryItem(product: product, isFromUrl: false));
     }
+
+    // 2. URL 기록 중에서 아직 상품 데이터가 없는 것들만 추가
+    for (final url in recentUrls) {
+      final productCode = _extractProductCode(url);
+      if (productCode != null) {
+        // 이미 상품 데이터에 있는지 확인
+        final exists = _allProducts.any((p) => p.productId == productCode);
+        if (!exists) {
+          // 더미 ProductModel 생성 (URL 기록용)
+          final dummyProduct = ProductModel(
+            productId: productCode,
+            name: '상품 $productCode',
+            url: url,
+            reviewCount: 0,
+            isCrawled: false,
+            isSpecial: false,
+            createdAt: DateTime.now().toIso8601String(),
+          );
+
+          chatList.add(
+            ChatHistoryItem(product: dummyProduct, isFromUrl: true, url: url),
+          );
+        }
+      }
+    }
+
+    return chatList;
   }
 
-  void _onChatItemTap(ChatHistoryItem chatItem) {
-    // 특가 상품인 경우
-    if (chatItem.specialProduct != null) {
-      final product = chatItem.specialProduct!;
-
-      if (widget.onChatRequested != null) {
-        widget.onChatRequested!(
-          productId: product.productUrl,
-          productName: product.productName,
-          productImage: product.imageUrl,
-          productPrice: product.price,
-        );
-      } else {
-        // 폴백: 기존 방식으로 이동
+  void _onChatItemTap(BuildContext context, ChatHistoryItem chatItem) {
+    if (chatItem.isFromUrl && chatItem.url != null) {
+      // 실제 URL 기록인 경우 - 홈 탭으로 이동
+      final viewModel = Provider.of<UrlInputViewModel>(context, listen: false);
+      viewModel.selectRecentUrl(chatItem.url!);
+      widget.onUrlSelected?.call();
+    } else {
+      // 상품 데이터가 있는 경우 - 채팅 화면으로 이동
+      final product = chatItem.product;
+      if (product.canChat) {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder:
                 (context) => ChatScreen(
-                  productId: product.productUrl,
-                  productName: product.productName,
+                  productId: product.productId,
+                  productName: product.name,
                   productImage: product.imageUrl,
                   productPrice: product.price,
                 ),
           ),
         );
-      }
-    } else {
-      // 기타 경우 - 채팅 화면으로 이동 (기본 처리)
-      if (widget.onChatRequested != null) {
-        widget.onChatRequested!(
-          productId: chatItem.productName,
-          productName: chatItem.productName,
-        );
       } else {
-        // 폴백: 기존 방식으로 이동
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder:
-                (context) => ChatScreen(
-                  productId: chatItem.productName,
-                  productName: chatItem.productName,
-                ),
+        // 리뷰 데이터가 준비되지 않은 경우
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.shortName}의 리뷰 데이터가 아직 준비되지 않았습니다.'),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -294,7 +254,10 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(
-          top: BorderSide(color: AppColors.outline.withOpacity(0.2), width: 1),
+          top: BorderSide(
+            color: AppColors.outline.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
       ),
       child: ElevatedButton(
@@ -373,7 +336,7 @@ class _EmptyHistoryView extends StatelessWidget {
             Icon(
               Icons.chat_bubble_outline,
               size: 64,
-              color: AppColors.primary.withOpacity(0.3),
+              color: AppColors.primary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -407,7 +370,7 @@ class _ChatHistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final product = chatItem.specialProduct;
+    final product = chatItem.product;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -416,7 +379,7 @@ class _ChatHistoryItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -437,16 +400,19 @@ class _ChatHistoryItem extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child:
-                        product?.imageUrl != null &&
-                                product!.imageUrl!.trim().isNotEmpty
+                        product.imageUrl != null &&
+                                product.imageUrl!.trim().isNotEmpty
                             ? Image.network(
-                              '${ApiConstants.baseUrlSync}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
+                              // 특가 상품인 경우 프록시 사용, 일반 상품은 직접 URL 사용
+                              product.isSpecial
+                                  ? '${ApiConstants.baseUrl}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}'
+                                  : product.imageUrl!,
                               width: 80,
                               height: 80,
                               fit: BoxFit.cover,
@@ -479,11 +445,15 @@ class _ChatHistoryItem extends StatelessWidget {
                                 return Container(
                                   width: 80,
                                   height: 80,
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   child: Icon(
                                     Icons.image_not_supported,
                                     size: 32,
-                                    color: AppColors.primary.withOpacity(0.5),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
                                   ),
                                 );
                               },
@@ -491,7 +461,7 @@ class _ChatHistoryItem extends StatelessWidget {
                             : Container(
                               width: 80,
                               height: 80,
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               child: Center(
                                 child: Text(
                                   chatItem.productIcon,
@@ -521,8 +491,8 @@ class _ChatHistoryItem extends StatelessWidget {
                       const SizedBox(height: 8),
 
                       // 할인율 (있는 경우)
-                      if (product?.discountRate != null &&
-                          product!.discountRate!.isNotEmpty) ...[
+                      if (product.discountRate != null &&
+                          product.discountRate!.isNotEmpty) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -545,8 +515,8 @@ class _ChatHistoryItem extends StatelessWidget {
                       ],
 
                       // 가격 정보
-                      if (product?.price != null &&
-                          product!.price!.isNotEmpty) ...[
+                      if (product.price != null &&
+                          product.price!.isNotEmpty) ...[
                         Text(
                           product.price!,
                           style: const TextStyle(
@@ -578,7 +548,7 @@ class _ChatHistoryItem extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -664,7 +634,7 @@ class IndividualChatScreen extends StatelessWidget {
                   Text(
                     '리뷰 500개 분석 완료',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.onPrimary.withOpacity(0.8),
+                      color: AppColors.onPrimary.withValues(alpha: 0.8),
                     ),
                   ),
                 ],

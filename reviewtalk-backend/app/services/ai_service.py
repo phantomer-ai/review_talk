@@ -6,11 +6,15 @@ from app.infrastructure.ai.vector_store import get_vector_store
 from app.infrastructure.ai.openai_client import get_openai_client
 from app.models.schemas import ReviewData
 from app.infrastructure.conversation_repository import ConversationRepository
+from app.infrastructure.chat_room_repository import ChatRoomRepository
+from app.infrastructure.unified_product_repository import unified_product_repository
 import asyncio
+import logging
 from app.utils.cache import ConversationCache
-import sqlite3
-from loguru import logger
-from app.core.config import settings
+from app.utils.url_utils import extract_product_id
+
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 conversation_cache = ConversationCache(maxlen=30)
 
@@ -22,23 +26,21 @@ class AIService:
         self.vector_store = get_vector_store()
         self.openai_client = get_openai_client()
         self.conversation_repository = ConversationRepository()
-    
+        self.chat_room_repository = ChatRoomRepository()
+        self.product_repository = unified_product_repository
+
     def process_and_store_reviews(
         self, 
         reviews: List[ReviewData], 
-        product_url: str,
+        product_id: str,
         product_info: Dict[str, Any] = None
     ) -> Dict[str, Any]:
-        """리뷰를 처리하고 벡터 저장소 및 일반 DB에 저장 (통합 방식)"""
+        """리뷰를 처리하고 벡터 저장소에 저장"""
         try:
-            # 1. products 테이블에 상품 정보 저장 (UPSERT)
-            product_id = self._save_product_to_db(product_url, product_info)
-            
-            # 2. reviews 테이블에 리뷰 저장
-            self._save_reviews_to_db(product_id, reviews)
-            
-            # 3. 벡터 저장소에 리뷰 추가 (상품 정보 포함)
-            self.vector_store.add_reviews(reviews, product_url, product_info)
+            logger.info(f"리뷰 추가 product_id :  [{product_id}]")
+
+            # 벡터 저장소에 리뷰 추가
+            self.vector_store.add_reviews(reviews, product_id)
             
             # 통계 정보 반환
             stats = self.vector_store.get_collection_stats()
@@ -46,7 +48,7 @@ class AIService:
             product_info_msg = ""
             if product_info:
                 product_info_msg = f" (상품명: {product_info.get('product_name', 'N/A')})"
-            
+
             return {
                 "success": True,
                 "message": f"{len(reviews)}개 리뷰가 성공적으로 저장되었습니다.{product_info_msg}",
@@ -64,80 +66,114 @@ class AIService:
     
     async def store_chat(
         self,
-        product_id: str,
+        user_id: str,
+        chat_room_id: int,
         message: str,
         chat_user_id: str,
         related_review_ids: list[str] = None
     ) -> int:
         """
-        채팅 내용을 conversations 테이블에 저장 (비동기)
+        채팅 내용을 conversations 테이블에 저장 (비동기, chat_room_id 기준)
         Args:
-            product_id (str): 제품 ID (product_url)
+            user_id (str): 실제 대화 주체(사람) user_id
+            product_id (str): 제품 ID (product_id)
             message (str): 채팅 메시지
-            chat_user_id (str): 사용자 ID 또는 AI ID
+            chat_user_id (str): 메시지 작성자(사람/AI)
             related_review_ids (list[str], optional): 관련 리뷰 ID 목록
         Returns:
             int: 저장된 row의 id (primary key)
         """
         loop = asyncio.get_running_loop()
         try:
-            product_id_int = int(product_id) if product_id is not None else None
+            logger.info(f"chat_room_id: {chat_room_id}")
+
         except Exception:
-            product_id_int = None
+            raise ValueError(f" invalid chat_room_id  :[{chat_room_id}]")
         return await loop.run_in_executor(
             None,
             self.conversation_repository.store_chat,
-            product_id_int,
+            chat_room_id,
             message,
             chat_user_id,
             related_review_ids
         )
     
     async def chat_with_reviews(
-        self, 
-        user_question: str, 
-        product_id: str = None, 
+        self,
+        user_id: str,
+        user_question: str,
+        product_id: str = None,
         n_results: int = 5
     ) -> Dict[str, Any]:
-        """사용자 질문에 대해 리뷰 기반 AI 응답 생성 (비동기)"""
+        """사용자 질문에 대해 리뷰 기반 AI 응답 생성 (비동기, chat_room_id 기준)"""
+        logger.info(f"[chat_with_reviews] 시작 - user_question: '{user_question}', product_id: '{product_id}', n_results: {n_results}")
         try:
-            # 관련 리뷰 검색
+            loop = asyncio.get_running_loop()
+            product_id_int = int(product_id) if product_id is not None else None
+
+            chat_room = None
+            # 1단계: 채팅 시작
+            # 이미 채팅방이 만들어져 있는지 확인
+            chat_room = self.chat_room_repository.get_chat_room_by_user_and_product(user_id, product_id_int)
+
+            #없다면?
+            if(chat_room == None):
+                chat_room_id = self.chat_room_repository.create_chat_room(user_id, product_id_int)
+
+            chat_room_id = chat_room.get("id")
+
+            # 2단계: 관련 리뷰 검색
+            logger.info(f"[chat_with_reviews] 2단계: 리뷰 검색 시작 - query: '{user_question}', product_url: '{product_id}', n_results: {n_results}")
             similar_reviews = self.vector_store.search_similar_reviews(
                 query=user_question,
                 n_results=n_results,
-                product_url=product_id  # product_id를 product_url 파라미터에 전달
-            )
-            
+                product_id=product_id
+                )
+
+            logger.info(f"[chat_with_reviews] 2단계: 리뷰 검색 완료 - 검색된 리뷰 수: {len(similar_reviews) if similar_reviews else 0}")
             if not similar_reviews:
+                logger.warning(f"[chat_with_reviews] 검색된 리뷰 없음 - query: '{user_question}', product_id: '{product_id}'")
                 return {
                     "success": False,
                     "message": "관련된 리뷰를 찾을 수 없습니다.",
                     "ai_response": "죄송합니다. 해당 질문과 관련된 리뷰 정보를 찾을 수 없습니다. 다른 질문을 시도해보세요.",
                     "source_reviews": []
                 }
-            user_id = "temp_1234"
-            ai_id = "open_1234"
-            # 1. 최근 대화 30건 cache에서 조회, 없으면 db에서 조회 후 cache에 set
-            recent_convs = conversation_cache.get_recent_conversations(user_id, product_id)
+
+
+            # 4단계: 최근 대화 30건 cache에서 조회, 없으면 db에서 조회 후 cache에 set
+            logger.info(f"[chat_with_reviews] 5단계: 최근 대화 캐시 조회 시작 - chat_room_id: '{chat_room_id}'")
+            recent_convs = conversation_cache.get_recent_conversations(chat_room_id)
+            logger.info(f"[chat_with_reviews] 5단계: 캐시에서 조회된 대화 수: {len(recent_convs) if recent_convs else 0}")
             if not recent_convs:
-                loop = asyncio.get_running_loop()
+                logger.info(f"[chat_with_reviews] 6단계: DB에서 최근 대화 조회 시작")
                 recent_convs = await loop.run_in_executor(
                     None,
                     self.conversation_repository.get_recent_conversations,
-                    user_id,
-                    product_id
+                    chat_room_id
                 )
+                logger.info(f"[chat_with_reviews] 6단계: DB에서 조회된 대화 수: {len(recent_convs) if recent_convs else 0}")
                 if recent_convs:
-                    conversation_cache.set_conversations(user_id, product_id, recent_convs)
-            # 2. AI 응답 생성 (최근 대화 30건도 전달)
+                    conversation_cache.set_conversations(chat_room_id, recent_convs)
+                    logger.info(f"[chat_with_reviews] 6단계: 대화 캐시에 저장 완료")
+            # 6.5단계: 상품 정보 조회 (통합 테이블에서)
+            product_info = None
+            try:
+                product_info = self.product_repository.get_product_by_id(str(product_id))
+                logger.info(f"[chat_with_reviews] 상품 정보 조회 완료: {product_info.get('product_name') if product_info else '정보 없음'}")
+            except Exception as e:
+                logger.warning(f"[chat_with_reviews] 상품 정보 조회 실패: {e}")
+            
+            # 7단계: AI 응답 생성 (최근 대화 30건 + 상품 정보도 전달)
+            logger.info(f"[chat_with_reviews] 7단계: AI 응답 생성 시작")
             ai_response = self.openai_client.generate_review_summary(
                 reviews=similar_reviews,
                 user_question=user_question,
                 recent_conversations=recent_convs
             )
-            # 관련 리뷰 ID 추출
+            # 8단계: 관련 리뷰 ID 추출
             related_review_ids = [r["metadata"].get("review_id") for r in similar_reviews if r.get("metadata") and r["metadata"].get("review_id")]
-            # 3. cache에 add_conversation (비동기, Write-Behind) 및 DB 저장 (비동기)
+            # 9단계: cache에 add_conversation (비동기, Write-Behind) 및 DB 저장 (비동기)
             user_msg = {
                 "message": user_question,
                 "chat_user_id": user_id,
@@ -145,37 +181,48 @@ class AIService:
             }
             ai_msg = {
                 "message": ai_response,
-                "chat_user_id": ai_id,
+                "chat_user_id": "open_1234",
                 "related_review_ids": related_review_ids
             }
+
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, conversation_cache.add_conversation, user_id, product_id, user_msg)
-            await loop.run_in_executor(None, conversation_cache.add_conversation, user_id, product_id, ai_msg)
-            # DB 저장은 비동기로 (이미 await self.store_chat으로 구현)
+            await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, user_msg)
+            await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, ai_msg)
+
+            # 11단계: DB 저장 (chat_room_id 기준)
             await self.store_chat(
-                product_id=product_id,
+                user_id=user_id,
+                chat_room_id=chat_room_id,
                 message=user_question,
                 chat_user_id=user_id,
                 related_review_ids=related_review_ids
             )
             await self.store_chat(
-                product_id=product_id,
+                user_id=user_id,
+                chat_room_id=chat_room_id,
                 message=ai_response,
-                chat_user_id=ai_id,
+                chat_user_id="open_ai_v1",
                 related_review_ids=related_review_ids
             )
-            return {
+            final_response = {
                 "success": True,
                 "message": "AI 응답이 성공적으로 생성되었습니다.",
                 "ai_response": ai_response,
                 "source_reviews": similar_reviews,
-                "reviews_used": len(similar_reviews)
+                "reviews_used": len(similar_reviews),
+                "product_info": {
+                    "product_id": product_info.get('product_id') if product_info else str(product_id),
+                    "product_name": product_info.get('product_name') if product_info else f"상품 {product_id}",
+                    "is_special": product_info.get('is_special', False) if product_info else False
+                } if product_id else None
             }
+            return final_response
         except Exception as e:
+            logger.error(f"[chat_with_reviews] 오류: {e}")
             return {
                 "success": False,
-                "message": f"AI 응답 생성 중 오류 발생: {str(e)}",
-                "ai_response": "죄송합니다. 현재 AI 응답을 생성할 수 없습니다.",
+                "message": f"AI 처리 중 오류: {str(e)}",
+                "ai_response": "",
                 "source_reviews": []
             }
     
@@ -226,85 +273,4 @@ class AIService:
                 "success": False,
                 "message": f"통계 조회 중 오류 발생: {str(e)}",
                 "stats": {"total_reviews": 0, "collection_name": "unknown"}
-            }
-    
-    def _save_product_to_db(self, product_url: str, product_info: Dict[str, Any] = None) -> int:
-        """products 테이블에 상품 정보 저장 (UPSERT) - 통합 방식"""
-        try:
-            db_path = settings.database_url.replace("sqlite:///", "")
-            
-            with sqlite3.connect(db_path) as conn:
-                cursor = conn.cursor()
-                
-                # 상품명 결정
-                product_name = "다나와 상품"
-                if product_info and product_info.get("product_name"):
-                    product_name = product_info["product_name"]
-                
-                # UPSERT: 기존 상품이 있으면 업데이트, 없으면 삽입
-                cursor.execute("""
-                    INSERT INTO products (name, url, created_at)
-                    VALUES (?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT(url) DO UPDATE SET
-                        name = excluded.name,
-                        created_at = created_at
-                """, (product_name, product_url))
-                
-                # 상품 ID 조회
-                cursor.execute("SELECT id FROM products WHERE url = ?", (product_url,))
-                result = cursor.fetchone()
-                
-                if result:
-                    product_id = result[0]
-                    logger.info(f"✅ 상품 DB 저장 완료: {product_name} (ID: {product_id})")
-                    return product_id
-                else:
-                    raise Exception("상품 저장 후 ID 조회 실패")
-                    
-        except Exception as e:
-            logger.error(f"❌ 상품 DB 저장 오류: {e}")
-            raise
-    
-    def _save_reviews_to_db(self, product_id: int, reviews: List[ReviewData]) -> int:
-        """reviews 테이블에 리뷰 저장 - 통합 방식"""
-        try:
-            db_path = settings.database_url.replace("sqlite:///", "")
-            saved_count = 0
-            
-            with sqlite3.connect(db_path) as conn:
-                cursor = conn.cursor()
-                
-                for review in reviews:
-                    try:
-                        # UPSERT: 기존 리뷰가 있으면 업데이트, 없으면 삽입
-                        cursor.execute("""
-                            INSERT INTO reviews (
-                                product_id, review_id, content, rating, author, date, created_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                            ON CONFLICT(review_id) DO UPDATE SET
-                                content = excluded.content,
-                                rating = excluded.rating,
-                                author = excluded.author,
-                                date = excluded.date
-                        """, (
-                            product_id,
-                            review.review_id or f"review_{hash(review.content)}",
-                            review.content,
-                            review.rating,
-                            review.author,
-                            review.date
-                        ))
-                        saved_count += 1
-                        
-                    except sqlite3.IntegrityError as e:
-                        # 중복 리뷰는 무시
-                        logger.debug(f"중복 리뷰 스킵: {review.review_id}")
-                        continue
-                
-                conn.commit()
-                logger.info(f"✅ 리뷰 DB 저장 완료: {saved_count}개")
-                return saved_count
-                
-        except Exception as e:
-            logger.error(f"❌ 리뷰 DB 저장 오류: {e}")
-            raise 
+            } 

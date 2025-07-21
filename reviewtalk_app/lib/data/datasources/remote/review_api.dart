@@ -3,6 +3,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/error/exceptions.dart';
 import '../../models/review_model.dart';
+import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/user_id_manager.dart';
 
 abstract class ReviewApiDataSource {
   /// 상품 리뷰 크롤링
@@ -22,23 +24,27 @@ class ReviewApiDataSourceImpl implements ReviewApiDataSource {
     CrawlReviewsRequestModel request,
   ) async {
     try {
-      print('[ReviewApi] 리뷰 크롤링 요청: ${request.productUrl}');
-
+      AppLogger.i('[ReviewApi] 리뷰 크롤링 요청: ${request.productUrl}');
+      final userId = await UserIdManager().getUserId();
+      final data = request.toJson();
+      if (!data.containsKey('user_id')) {
+        data['user_id'] = userId;
+      }
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiConstants.crawlReviews,
-        data: request.toJson(),
+        data: data,
         options: Options(
           receiveTimeout: Duration(seconds: 120), // 크롤링 작업용 2분 타임아웃
         ),
       );
 
-      print('[ReviewApi] 응답 상태: ${response.statusCode}');
+      AppLogger.i('[ReviewApi] 응답 상태: ${response.statusCode}');
 
       if (response.statusCode == 200 && response.data != null) {
         final responseModel = CrawlReviewsResponseModel.fromJson(
           response.data!,
         );
-        print('[ReviewApi] 크롤링 성공: ${responseModel.reviews.length}개 리뷰');
+        AppLogger.i('[ReviewApi] 크롤링 성공: ${responseModel.reviews.length}개 리뷰');
         return responseModel;
       } else {
         throw ServerException(
@@ -53,7 +59,7 @@ class ReviewApiDataSourceImpl implements ReviewApiDataSource {
     } on TimeoutException {
       rethrow;
     } catch (e) {
-      print('[ReviewApi] 예외 발생: $e');
+      AppLogger.e('[ReviewApi] 예외 발생: $e');
       if (e.toString().contains('FormatException') ||
           e.toString().contains('type')) {
         throw JsonParsingException(message: '서버 응답을 파싱하는 중 오류가 발생했습니다.');

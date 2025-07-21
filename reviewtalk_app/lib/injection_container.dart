@@ -38,7 +38,7 @@ Future<void> init() async {
   // Dio 클라이언트 설정
   final dio = Dio(
     BaseOptions(
-      baseUrl: ApiConstants.baseUrlSync,
+      baseUrl: ApiConstants.baseUrl, // 환경변수 기반 baseUrl 사용
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {'Content-Type': 'application/json'},
@@ -96,5 +96,9 @@ Future<void> init() async {
   // 새로운 ViewModel들
   sl.registerFactory(() => UrlInputViewModel(crawlReviews: sl(), prefs: sl()));
 
-  sl.registerFactory(() => ChatViewModel(sendMessage: sl()));
+  sl.registerFactory(() => ChatViewModel(
+        sendMessage: sl(),
+        getChatHistory: sl(),
+        chatRepository: sl(),
+      ));
 }

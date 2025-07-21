@@ -31,22 +31,30 @@ class SourceReviewModel extends Equatable {
 
 /// 채팅 요청 모델
 class ChatRequestModel extends Equatable {
-  final String productId;
+  final String? productId;
   final String question;
+  final String? chatRoomId;
 
-  const ChatRequestModel({required this.productId, required this.question});
+  const ChatRequestModel({
+    required this.question,
+    this.productId,
+    this.chatRoomId,
+  });
 
   /// 객체를 JSON으로 변환
   Map<String, dynamic> toJson() {
-    return {'product_id': productId, 'question': question};
+    final map = {'question': question};
+    if (productId != null) map['product_id'] = productId.toString();
+    if (chatRoomId != null) map['chat_room_id'] = chatRoomId.toString();
+    return map;
   }
 
   @override
-  List<Object> get props => [productId, question];
+  List<Object?> get props => [productId, question, chatRoomId];
 
   @override
   String toString() {
-    return 'ChatRequestModel(productId: $productId, question: $question)';
+    return 'ChatRequestModel(productId: $productId, question: $question, chatRoomId: $chatRoomId)';
   }
 }
 

@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # ReviewTalk Project - Claude Development Guide
 
 ## Project Overview
@@ -70,12 +74,23 @@ cd reviewtalk-backend
 uv install                                          # Install dependencies
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000  # Run development server
 
-# Database initialization
-uv run python init_db.py                           # Initialize database
+# Testing and quality assurance
+uv run pytest                                      # Run all tests
+uv run pytest tests/test_ai_service.py            # Run specific test file
+uv run pytest -v                                  # Run tests with verbose output
+
+# Database utilities
+uv run python check_db.py                         # Quick database inspection
+uv run python check_both_db.py                    # Check both main and special products databases
+uv run python check_reviews.py                    # Review data inspection
+uv run python test_special_deals.py               # Comprehensive special deals system test
 
 # API documentation
 # http://localhost:8000/docs                       # Swagger UI
 # http://localhost:8000/redoc                      # ReDoc
+
+# Special deals testing
+python check_special_deals.py                     # Standalone special deals test (from root)
 ```
 
 ### Frontend Development
@@ -86,10 +101,20 @@ flutter pub get                                     # Install dependencies
 flutter run -d chrome                              # Run in web browser
 flutter run                                        # Run on connected device/emulator
 
-# Build and test
-flutter build apk                                   # Build Android APK
-flutter test                                       # Run unit tests
+# Testing and quality assurance
+flutter test                                       # Run all tests
+flutter test test/widget_test.dart                 # Run specific test file
+flutter test --coverage                            # Run tests with coverage
 flutter analyze                                    # Static analysis
+
+# Build commands
+flutter build apk                                   # Build Android APK
+flutter build ios                                  # Build iOS app
+./android/gradlew assembleDebug                    # Android Gradle build
+
+# Development utilities
+flutter clean && flutter pub get                   # Clean and reinstall dependencies
+flutter doctor                                     # Check Flutter installation
 ```
 
 ## API Endpoints
@@ -170,16 +195,32 @@ DEBUG=true
 - Follow Material Design 3 guidelines
 
 ### 3. Testing Strategy
-- Backend: Use FastAPI's built-in testing with pytest
-- Frontend: Widget tests, unit tests for ViewModels
-- Integration: End-to-end API testing
+- **Backend**: pytest with comprehensive test coverage
+  - `tests/test_ai_service.py`: AI service functionality
+  - `tests/test_chat.py`: Chat API endpoints
+  - `tests/test_conversation.py`: Conversation management
+  - `tests/test_schemas.py`: Pydantic schema validation
+  - Multiple database repository tests
+- **Frontend**: Flutter testing framework
+  - `test/widget_test.dart`: UI widget tests
+  - `test/viewmodel_test.dart`: Business logic tests
+  - `test/data_layer_test.dart`: Data layer unit tests
+- **Integration**: Database utilities for manual testing and validation
 
 ## Database Schema
 
 ### SQLite (Development)
-- Products table (product_url, metadata)
-- Reviews table (product_id, review_text, rating, author)
-- Chat history (user_id, messages, timestamps)
+- **users**: User identity and profile management (user_id, user_name, user_type, created_at)
+  - user_type: 'human' or 'ai' to distinguish between participants
+- **products**: Product metadata and URLs
+- **reviews**: Product review content, ratings, and author information
+- **chat_room**: User-specific chat sessions
+- **conversations**: Message history with unified structure
+  - message: The actual message content
+  - chat_user_id: References users.user_id (both human and AI participants)
+  - related_review_ids: Comma-separated list of related review IDs
+  - created_at: Message timestamp
+- **special_products**: Special deals tracking and monitoring
 
 ### ChromaDB (Vector Store)
 - Document embeddings for review similarity search
@@ -230,7 +271,7 @@ DEBUG=true
 
 ## Git Workflow
 
-Current branch: `develop_rota`
+Current branch: `feature-one`
 Main branch: `main`
 
 ### Commit Message Format
@@ -292,7 +333,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-**Development Status**: Phase 1 Complete ✅
-**Next Phase**: AI Integration with ChromaDB and OpenAI
+**Development Status**: Advanced Phase - Feature Development ✅
+- ✅ Core backend API with FastAPI
+- ✅ Flutter mobile app with clean architecture
+- ✅ AI integration (OpenAI GPT-4 + ChromaDB)
+- ✅ Database schema with conversations system
+- ✅ Special deals monitoring system
+- 🚧 Current: Feature enhancements and optimizations
+
+**Current Branch**: `feature-one`
 **Developer**: Single full-stack developer
 **Started**: June 8, 2025

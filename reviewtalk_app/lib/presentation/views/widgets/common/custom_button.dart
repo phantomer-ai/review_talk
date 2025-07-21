@@ -116,7 +116,9 @@ class CustomButton extends StatelessWidget {
                 isButtonEnabled ? AppColors.primary : AppColors.disabled,
             foregroundColor: _getTextColor(theme, isButtonEnabled),
             disabledBackgroundColor: AppColors.disabled,
-            disabledForegroundColor: AppColors.onSurface.withOpacity(0.38),
+            disabledForegroundColor: AppColors.onSurface.withValues(
+              alpha: 0.38,
+            ),
             elevation: isButtonEnabled ? 2 : 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
@@ -135,7 +137,9 @@ class CustomButton extends StatelessWidget {
                 isButtonEnabled ? AppColors.secondary : AppColors.disabled,
             foregroundColor: _getTextColor(theme, isButtonEnabled),
             disabledBackgroundColor: AppColors.disabled,
-            disabledForegroundColor: AppColors.onSurface.withOpacity(0.38),
+            disabledForegroundColor: AppColors.onSurface.withValues(
+              alpha: 0.38,
+            ),
             elevation: isButtonEnabled ? 1 : 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
@@ -152,7 +156,9 @@ class CustomButton extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor:
                 isButtonEnabled ? AppColors.primary : AppColors.disabled,
-            disabledForegroundColor: AppColors.onSurface.withOpacity(0.38),
+            disabledForegroundColor: AppColors.onSurface.withValues(
+              alpha: 0.38,
+            ),
             side: BorderSide(
               color: isButtonEnabled ? AppColors.primary : AppColors.disabled,
             ),
@@ -171,7 +177,9 @@ class CustomButton extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor:
                 isButtonEnabled ? AppColors.primary : AppColors.disabled,
-            disabledForegroundColor: AppColors.onSurface.withOpacity(0.38),
+            disabledForegroundColor: AppColors.onSurface.withValues(
+              alpha: 0.38,
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -202,7 +210,7 @@ class CustomButton extends StatelessWidget {
 
   Color _getTextColor(ThemeData theme, bool isEnabled) {
     if (!isEnabled) {
-      return AppColors.onSurface.withOpacity(0.38);
+      return AppColors.onSurface.withValues(alpha: 0.38);
     }
 
     switch (style) {

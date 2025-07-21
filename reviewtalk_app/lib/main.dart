@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_strings.dart';
-import 'core/constants/api_constants.dart';
 import 'injection_container.dart' as di;
 import 'presentation/viewmodels/chat_viewmodel.dart';
 import 'presentation/viewmodels/url_input_viewmodel.dart';
 import 'presentation/views/screens/main_screen.dart';
+import 'core/utils/user_id_manager.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load environment variables
   await dotenv.load(fileName: ".env");
-
-  // 서버 자동 탐지
-  print('🔍 서버 탐지 중...');
-  final serverUrl = await ApiConstants.baseUrl;
-  print('✅ 서버 탐지 완료: $serverUrl');
-
   await di.init();
+  // user_id 초기화 (최초 실행 시 발급 및 저장)
+  try {
+    await UserIdManager().getUserId();
+  } catch (e, s) {
+    // 치명적 에러는 아니므로 로그만 남김
+    // ignore: avoid_print
+    print('user_id 초기화 실패: $e\n$s');
+  }
   runApp(const ReviewTalkApp());
 }
 
@@ -109,7 +109,7 @@ class ReviewTalkApp extends StatelessWidget {
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: AppColors.surface,
-        surfaceTintColor: AppColors.primary.withOpacity(0.05),
+        surfaceTintColor: AppColors.primary.withValues(alpha: 0.05),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,

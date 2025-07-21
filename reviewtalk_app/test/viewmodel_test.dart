@@ -236,7 +236,7 @@ void main() {
 
     test('ChatViewModel 추천 질문 리스트 테스트', () {
       // Given
-      final viewModel = ChatViewModel(sendMessage: MockSendMessage());
+      final viewModel = ChatViewModel(sendMessage: MockSendMessage(), getChatHistory: ge(), chatRepository: null);
 
       // Then
       expect(viewModel.suggestedQuestions.isNotEmpty, true);

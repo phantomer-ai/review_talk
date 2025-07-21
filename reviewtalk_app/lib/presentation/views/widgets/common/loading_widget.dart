@@ -229,7 +229,7 @@ class OverlayLoadingWidget extends StatelessWidget {
     if (!isVisible) return const SizedBox.shrink();
 
     return Container(
-      color: AppColors.scrim.withOpacity(0.7),
+      color: AppColors.scrim.withValues(alpha: 0.7),
       child: LoadingWidget(
         message: message ?? AppStrings.loadingTitle,
         color: AppColors.surface,

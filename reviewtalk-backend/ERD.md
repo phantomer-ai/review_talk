@@ -1,49 +1,57 @@
 # ERD (Entity Relationship Diagram)
 
-## ReviewTalk DB 구조
+## ReviewTalk DB 구조 (최신)
 
 ```mermaid
-%%{init: {'theme': 'neutral'}}%%
 erDiagram
     USER {
-        INTEGER id PK
-        TEXT user_id UNIQUE
-        TEXT user_name
-        TEXT user_type (human|ai)
-        TIMESTAMP created_at
+        int id PK
+        string user_id UK
+        string user_name
+        string user_type
+        timestamp created_at
     }
     PRODUCTS {
-        INTEGER id PK
-        TEXT name
-        TEXT url UNIQUE
-        TIMESTAMP created_at
+        int id PK
+        string name
+        string url UK
+        timestamp created_at
+    }
+    CHAT_ROOM {
+        int id PK
+        string user_id FK "채팅방 소유자(사람) user_id"
+        int product_id FK
+        timestamp created_at
     }
     REVIEWS {
-        INTEGER id PK
-        INTEGER product_id FK
-        TEXT review_id UNIQUE
-        TEXT content
-        INTEGER rating
-        TEXT author
-        TEXT date
-        TIMESTAMP created_at
+        int id PK
+        int product_id FK
+        string review_id UK
+        string content
+        int rating
+        string author
+        string date
+        timestamp created_at
     }
     CONVERSATIONS {
-        INTEGER id PK
-        INTEGER product_id FK
-        TEXT message
-        TEXT chat_user_id FK
-        TEXT related_review_ids
-        TIMESTAMP created_at
+        int id PK
+        int chat_room_id FK "채팅방 ID"
+        string message
+        string chat_user_id FK "메시지 작성자(사람/AI)"
+        string related_review_ids
+        timestamp created_at
     }
 
-    PRODUCTS ||--o{ REVIEWS : "has"
-    PRODUCTS ||--o{ CONVERSATIONS : "has"
-    USER ||--o{ CONVERSATIONS : "participates"
-    REVIEWS ||--o{ CONVERSATIONS : "referenced in"
+    PRODUCTS ||--o{ REVIEWS : has
+    PRODUCTS ||--o{ CHAT_ROOM : has
+    USER ||--o{ CHAT_ROOM : owns
+    CHAT_ROOM ||--o{ CONVERSATIONS : has
+    USER ||--o{ CONVERSATIONS : writes
+    REVIEWS ||--o{ CONVERSATIONS : referenced_in
 ```
 
 ## 설명
 - USER: 사람/AI 모두 포함, user_type으로 구분
-- CONVERSATIONS: message, chat_user_id(=user.user_id), 관련 리뷰 ID, 생성일 등 저장
-- PRODUCTS, REVIEWS: 기존과 동일 
+- CONVERSATIONS: user_id(대화 주체, 실제 사용자), chat_user_id(메시지 작성자, 사람/AI), 관련 리뷰 ID, 생성일 등 저장
+- PRODUCTS, REVIEWS: 기존과 동일
+- user_id + product_id 조합으로 대화 캐시 및 조회 

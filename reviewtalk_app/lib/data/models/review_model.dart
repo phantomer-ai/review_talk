@@ -73,47 +73,41 @@ class ReviewModel extends Equatable {
   }
 }
 
-/// 크롤링 응답 모델
+/// 크롤링 응답 모델 (백엔드 CrawlResponse에 맞게 수정)
 class CrawlReviewsResponseModel extends Equatable {
   final bool success;
-  final String productId;
-  final String productName;
-  final String? productImage;
-  final String? productPrice;
-  final String? productBrand;
-  final List<ReviewModel> reviews;
-  final int totalReviews;
+  final String message;
+  final int reviewsFound;
+  final String? productId;
+  final Map<String, dynamic>? productInfo;
   final String? errorMessage;
 
   const CrawlReviewsResponseModel({
     required this.success,
-    required this.productId,
-    required this.productName,
-    this.productImage,
-    this.productPrice,
-    this.productBrand,
-    required this.reviews,
-    required this.totalReviews,
+    required this.message,
+    required this.reviewsFound,
+    this.productId,
+    this.productInfo,
     this.errorMessage,
   });
+
+  // 편의 속성들 (기존 코드 호환성을 위해)
+  String get productName =>
+      productInfo?['name'] ?? productInfo?['product_name'] ?? '상품명 없음';
+  String? get productImage => productInfo?['image_url'];
+  String? get productPrice => productInfo?['price'];
+  String? get productBrand => productInfo?['brand'];
+  List<ReviewModel> get reviews => []; // 백엔드에서 리뷰 목록을 직접 반환하지 않음
+  int get totalReviews => reviewsFound;
 
   /// JSON에서 객체로 변환
   factory CrawlReviewsResponseModel.fromJson(Map<String, dynamic> json) {
     return CrawlReviewsResponseModel(
       success: json['success'] as bool,
-      productId: json['product_id'] as String,
-      productName: json['product_name'] as String,
-      productImage: json['product_image'] as String?,
-      productPrice: json['product_price'] as String?,
-      productBrand: json['product_brand'] as String?,
-      reviews:
-          (json['reviews'] as List<dynamic>)
-              .map(
-                (reviewJson) =>
-                    ReviewModel.fromJson(reviewJson as Map<String, dynamic>),
-              )
-              .toList(),
-      totalReviews: json['total_reviews'] as int,
+      message: json['message'] as String,
+      reviewsFound: json['reviews_found'] as int? ?? 0,
+      productId: json['product_id'] as String?,
+      productInfo: json['product_info'] as Map<String, dynamic>?,
       errorMessage: json['error_message'] as String?,
     );
   }
@@ -122,13 +116,10 @@ class CrawlReviewsResponseModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'success': success,
+      'message': message,
+      'reviews_found': reviewsFound,
       'product_id': productId,
-      'product_name': productName,
-      'product_image': productImage,
-      'product_price': productPrice,
-      'product_brand': productBrand,
-      'reviews': reviews.map((review) => review.toJson()).toList(),
-      'total_reviews': totalReviews,
+      'product_info': productInfo,
       'error_message': errorMessage,
     };
   }
@@ -136,19 +127,16 @@ class CrawlReviewsResponseModel extends Equatable {
   @override
   List<Object?> get props => [
     success,
+    message,
+    reviewsFound,
     productId,
-    productName,
-    productImage,
-    productPrice,
-    productBrand,
-    reviews,
-    totalReviews,
+    productInfo,
     errorMessage,
   ];
 
   @override
   String toString() {
-    return 'CrawlReviewsResponseModel(success: $success, productId: $productId, productName: $productName, reviewsCount: ${reviews.length})';
+    return 'CrawlReviewsResponseModel(success: $success, message: $message, reviewsFound: $reviewsFound, productId: $productId)';
   }
 }
 
