@@ -2,7 +2,7 @@
 애플리케이션 설정 및 환경변수 관리
 """
 import os
-from typing import List
+from typing import List, Literal
 from pydantic_settings import BaseSettings
 
 
@@ -24,8 +24,16 @@ class Settings(BaseSettings):
     # 데이터베이스 설정
     database_url: str = "sqlite:///./data/reviewtalk.db"
     
+    # AI/LLM 설정
+    llm_provider: Literal["openai", "gemini"] = "openai"  # 기본값은 OpenAI
+    
     # OpenAI API 설정
     openai_api_key: str = ""
+    openai_model: str = "gpt-4o"
+    
+    # Google Gemini API 설정
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-1.5-pro"
     
     # 크롤링 설정
     crawling_timeout: int = 30

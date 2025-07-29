@@ -3,7 +3,7 @@ AI 기반 리뷰 분석 서비스
 """
 from typing import List, Dict, Any
 from app.infrastructure.ai.vector_store import get_vector_store
-from app.infrastructure.ai.openai_client import get_openai_client
+from app.infrastructure.ai.openai_client import get_ai_client
 from app.models.schemas import ReviewData
 from app.infrastructure.conversation_repository import ConversationRepository
 from app.infrastructure.chat_room_repository import ChatRoomRepository
@@ -24,7 +24,7 @@ class AIService:
     def __init__(self):
         """AI 서비스 초기화"""
         self.vector_store = get_vector_store()
-        self.openai_client = get_openai_client()
+        self.ai_client = get_ai_client()
         self.conversation_repository = ConversationRepository()
         self.chat_room_repository = ChatRoomRepository()
         self.product_repository = unified_product_repository
@@ -173,7 +173,7 @@ class AIService:
             
             # 7단계: AI 응답 생성 (최근 대화 30건 + 상품 정보도 전달)
             logger.info(f"[chat_with_reviews] 7단계: AI 응답 생성 시작")
-            ai_response = self.openai_client.generate_review_summary(
+            ai_response = self.ai_client.generate_review_summary(
                 reviews=similar_reviews,
                 user_question=user_question,
                 recent_conversations=recent_convs
@@ -252,7 +252,7 @@ class AIService:
                 }
             
             # 제품 요약 생성
-            overview = self.openai_client.generate_product_overview(all_reviews)
+            overview = self.ai_client.generate_product_overview(all_reviews)
             
             return {
                 "success": True,

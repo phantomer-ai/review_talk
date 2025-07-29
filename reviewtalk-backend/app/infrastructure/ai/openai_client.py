@@ -1,22 +1,76 @@
 """
-OpenAI GPT를 사용한 AI 응답 생성
+OpenAI GPT와 Google Gemini를 사용한 AI 응답 생성
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from openai import OpenAI
+import google.generativeai as genai
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-class OpenAIClient:
-    """OpenAI GPT를 사용한 AI 응답 생성"""
+class AIClient:
+    """OpenAI GPT와 Google Gemini를 지원하는 AI 응답 생성 클라이언트"""
     
     def __init__(self):
-        """OpenAI 클라이언트 초기화"""
-        self.client = OpenAI(api_key=settings.openai_api_key)
-        self.model = "gpt-4o"
-        logger.info(f"[OpenAIClient.__init__] 모델: {self.model}, API KEY 존재 여부: {bool(settings.openai_api_key)}")
+        """AI 클라이언트 초기화"""
+        self.provider = settings.llm_provider
+        
+        if self.provider == "openai":
+            self.client = OpenAI(api_key=settings.openai_api_key)
+            self.model = settings.openai_model
+            logger.info(f"[AIClient.__init__] OpenAI 모델: {self.model}, API KEY 존재 여부: {bool(settings.openai_api_key)}")
+        elif self.provider == "gemini":
+            genai.configure(api_key=settings.gemini_api_key)
+            self.model = settings.gemini_model
+            logger.info(f"[AIClient.__init__] Gemini 모델: {self.model}, API KEY 존재 여부: {bool(settings.gemini_api_key)}")
+        else:
+            raise ValueError(f"지원되지 않는 LLM 제공업체: {self.provider}")
 
+    def _generate_openai_response(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int = 1000) -> str:
+        """OpenAI API를 사용한 응답 생성"""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"[_generate_openai_response] OpenAI API 호출 오류: {e}", exc_info=True)
+            raise
+
+    def _generate_gemini_response(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int = 1000) -> str:
+        """Google Gemini API를 사용한 응답 생성"""
+        try:
+            model = genai.GenerativeModel(
+                model_name=self.model,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
+                )
+            )
+            
+            # Gemini는 system instruction과 user prompt를 결합해서 사용
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response = model.generate_content(full_prompt)
+            return response.text
+        except Exception as e:
+            logger.error(f"[_generate_gemini_response] Gemini API 호출 오류: {e}", exc_info=True)
+            raise
+
+    def generate_response(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int = 1000) -> str:
+        """선택된 LLM 제공업체를 사용한 응답 생성"""
+        if self.provider == "openai":
+            return self._generate_openai_response(system_prompt, user_prompt, temperature, max_tokens)
+        elif self.provider == "gemini":
+            return self._generate_gemini_response(system_prompt, user_prompt, temperature, max_tokens)
+        else:
+            raise ValueError(f"지원되지 않는 LLM 제공업체: {self.provider}")
 
     def generate_review_summary(
         self, 
@@ -28,6 +82,8 @@ class OpenAIClient:
         logger.info(f"[generate_review_summary] 호출 - user_question: {user_question}")
         logger.info(f"[generate_review_summary] reviews 개수: {len(reviews)}")
         logger.info(f"[generate_review_summary] recent_conversations 개수: {len(recent_conversations) if recent_conversations else 0}")
+        logger.info(f"[generate_review_summary] 사용 중인 LLM: {self.provider} ({self.model})")
+        
         # 최근 대화 맥락 준비
         conversation_context = ""
         if recent_conversations:
@@ -83,27 +139,20 @@ class OpenAIClient:
         user_prompt = f"""사용자 질문: {user_question}\n\n{conversation_context}\n\n관련 리뷰 데이터:\n{reviews_context}\n\n위 리뷰 데이터와 최근 대화 맥락을 바탕으로 사용자의 질문에 답변해주세요."""
         logger.info(f"[generate_review_summary] system_prompt 길이: {len(system_prompt)}")
         logger.info(f"[generate_review_summary] user_prompt 길이: {len(user_prompt)}")
-        # GPT API 호출
+        
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.3, # 0.0 ~ 1.0 사이의 값으로 설정, 리뷰기반 0.3으로 조정
-                max_tokens=1000
-            )
-            logger.info(f"[generate_review_summary] OpenAI 응답 수신 - choices: {len(response.choices)}")
-            logger.info(f"[generate_review_summary] 응답 내용 길이: {len(response.choices[0].message.content) if response.choices and response.choices[0].message and response.choices[0].message.content else 0}")
-            return response.choices[0].message.content
+            response = self.generate_response(system_prompt, user_prompt, temperature=0.3, max_tokens=1000)
+            logger.info(f"[generate_review_summary] AI 응답 수신 - 응답 길이: {len(response) if response else 0}")
+            return response
         except Exception as e:
-            logger.error(f"[generate_review_summary] OpenAI API 호출 오류: {e}", exc_info=True)
+            logger.error(f"[generate_review_summary] AI API 호출 오류: {e}", exc_info=True)
             return "죄송합니다. 현재 AI 응답을 생성할 수 없습니다. 잠시 후 다시 시도해주세요."
     
     def generate_product_overview(self, reviews: List[Dict[str, Any]]) -> str:
         """제품 전체 리뷰 요약 생성"""
         logger.info(f"[generate_product_overview] 호출 - 리뷰 개수: {len(reviews)}")
+        logger.info(f"[generate_product_overview] 사용 중인 LLM: {self.provider} ({self.model})")
+        
         # 리뷰 통계 계산
         total_reviews = len(reviews)
         ratings = []
@@ -153,29 +202,24 @@ class OpenAIClient:
         logger.info(f"[generate_product_overview] system_prompt 길이: {len(system_prompt)}")
         logger.info(f"[generate_product_overview] user_prompt 길이: {len(user_prompt)}")
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=800
-            )
-            logger.info(f"[generate_product_overview] OpenAI 응답 수신 - choices: {len(response.choices)}")
-            logger.info(f"[generate_product_overview] 응답 내용 길이: {len(response.choices[0].message.content) if response.choices and response.choices[0].message and response.choices[0].message.content else 0}")
-            return response.choices[0].message.content
+            response = self.generate_response(system_prompt, user_prompt, temperature=0.7, max_tokens=800)
+            logger.info(f"[generate_product_overview] AI 응답 수신 - 응답 길이: {len(response) if response else 0}")
+            return response
         except Exception as e:
-            logger.error(f"[generate_product_overview] OpenAI API 호출 오류: {e}", exc_info=True)
+            logger.error(f"[generate_product_overview] AI API 호출 오류: {e}", exc_info=True)
             return "제품 요약을 생성할 수 없습니다."
 
 
-# 전역 OpenAI 클라이언트 인스턴스 - 지연 초기화
-openai_client = None
+# 전역 AI 클라이언트 인스턴스 - 지연 초기화
+ai_client = None
 
-def get_openai_client():
-    """OpenAI 클라이언트 싱글톤 인스턴스 반환"""
-    global openai_client
-    if openai_client is None:
-        openai_client = OpenAIClient()
-    return openai_client 
+def get_ai_client():
+    """AI 클라이언트 싱글톤 인스턴스 반환"""
+    global ai_client
+    if ai_client is None:
+        ai_client = AIClient()
+    return ai_client
+
+# 하위 호환성을 위한 OpenAI 클라이언트 별칭
+OpenAIClient = AIClient
+get_openai_client = get_ai_client 
