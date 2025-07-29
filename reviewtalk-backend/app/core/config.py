@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/reviewtalk.db"
     
     # AI/LLM 설정
-    llm_provider: Literal["openai", "gemini"] = "openai"  # 기본값은 OpenAI
+    llm_provider: Literal["openai", "gemini", "qwen3", "local"] = "openai"  # Qwen3 추가
     
     # OpenAI API 설정
     openai_api_key: str = ""
@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # Google Gemini API 설정
     gemini_api_key: str = ""
     gemini_model: str = "gemini-1.5-pro"
+    
+    # Qwen3/Local LLM 설정 (Ollama, vLLM 등)
+    local_llm_base_url: str = "http://localhost:11434/v1"  # Ollama 기본 URL
+    local_llm_model: str = "qwen3:8b"  # 사용할 모델명
+    local_llm_api_key: str = "not-needed"  # 로컬 모델은 API 키 불필요
     
     # 크롤링 설정
     crawling_timeout: int = 30

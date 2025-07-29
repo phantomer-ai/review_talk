@@ -1,5 +1,5 @@
 """
-OpenAI GPT와 Google Gemini를 사용한 AI 응답 생성
+OpenAI GPT, Google Gemini, Qwen3 등을 사용한 AI 응답 생성
 """
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AIClient:
-    """OpenAI GPT와 Google Gemini를 지원하는 AI 응답 생성 클라이언트"""
+    """OpenAI GPT, Google Gemini, Qwen3를 지원하는 AI 응답 생성 클라이언트"""
     
     def __init__(self):
         """AI 클라이언트 초기화"""
@@ -24,6 +24,14 @@ class AIClient:
             genai.configure(api_key=settings.gemini_api_key)
             self.model = settings.gemini_model
             logger.info(f"[AIClient.__init__] Gemini 모델: {self.model}, API KEY 존재 여부: {bool(settings.gemini_api_key)}")
+        elif self.provider in ["qwen3", "local"]:
+            # Qwen3 또는 로컬 LLM (Ollama, vLLM 등)을 OpenAI 호환 API로 사용
+            self.client = OpenAI(
+                base_url=settings.local_llm_base_url,
+                api_key=settings.local_llm_api_key
+            )
+            self.model = settings.local_llm_model
+            logger.info(f"[AIClient.__init__] 로컬 LLM 모델: {self.model}, Base URL: {settings.local_llm_base_url}")
         else:
             raise ValueError(f"지원되지 않는 LLM 제공업체: {self.provider}")
 
@@ -42,6 +50,23 @@ class AIClient:
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"[_generate_openai_response] OpenAI API 호출 오류: {e}", exc_info=True)
+            raise
+
+    def _generate_local_llm_response(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int = 1000) -> str:
+        """로컬 LLM (Qwen3, Ollama 등) OpenAI 호환 API를 사용한 응답 생성"""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"[_generate_local_llm_response] 로컬 LLM API 호출 오류: {e}", exc_info=True)
             raise
 
     def _generate_gemini_response(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int = 1000) -> str:
@@ -69,6 +94,8 @@ class AIClient:
             return self._generate_openai_response(system_prompt, user_prompt, temperature, max_tokens)
         elif self.provider == "gemini":
             return self._generate_gemini_response(system_prompt, user_prompt, temperature, max_tokens)
+        elif self.provider in ["qwen3", "local"]:
+            return self._generate_local_llm_response(system_prompt, user_prompt, temperature, max_tokens)
         else:
             raise ValueError(f"지원되지 않는 LLM 제공업체: {self.provider}")
 
