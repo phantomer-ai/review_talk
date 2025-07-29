@@ -3,7 +3,7 @@ import 'api_constants.dart'; // ApiConstants import 추가
 /// 애플리케이션 전반에서 사용하는 상수들
 class AppConstants {
   // API 관련 - 하드코딩된 baseUrl 제거하고 ApiConstants 사용
-  static String get baseUrl => ApiConstants.baseUrlSync; // 이미 탐지된 URL 사용
+  static String get baseUrl => ApiConstants.baseUrl; // 이미 탐지된 URL 사용
   static const String apiVersion = '/api/v1';
 
   // 엔드포인트

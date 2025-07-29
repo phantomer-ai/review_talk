@@ -184,7 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   widget.productImage != null &&
                           widget.productImage!.trim().isNotEmpty
                       ? Image.network(
-                        '${ApiConstants.baseUrlSync}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(widget.productImage!)}',
+                        '${ApiConstants.baseUrl}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(widget.productImage!)}',
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,

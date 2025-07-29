@@ -58,13 +58,12 @@ dependencies:
 
   # Functional programming
   dartz: ^0.10.1
+  
+  # Environment variables  
   flutter_dotenv: ^5.1.0
   
   # URL launcher for opening web pages
   url_launcher: ^6.3.1
-  
-  # Environment variables
-  flutter_dotenv: ^5.1.0
   
   # Network information
   network_info_plus: ^6.0.1
@@ -95,8 +94,6 @@ flutter:
   assets:
     - .env
     - assets/images/
-    - assets/images/ReviewTalk_logo_white.png
-    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

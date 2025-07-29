@@ -112,15 +112,19 @@ class AIService:
             product_id_int = int(product_id) if product_id is not None else None
 
             chat_room = None
-            # 1단계: 채팅 시작
-            # 이미 채팅방이 만들어져 있는지 확인
-            chat_room = self.chat_room_repository.get_chat_room_by_user_and_product(user_id, product_id_int)
+            chat_room_id = None
+            
+            # product_id가 있을 때만 채팅방 생성/조회
+            if product_id_int is not None:
+                # 1단계: 채팅 시작
+                # 이미 채팅방이 만들어져 있는지 확인
+                chat_room = self.chat_room_repository.get_chat_room_by_user_and_product(user_id, product_id_int)
 
-            #없다면?
-            if(chat_room == None):
-                chat_room_id = self.chat_room_repository.create_chat_room(user_id, product_id_int)
-
-            chat_room_id = chat_room.get("id")
+                #없다면?
+                if(chat_room == None):
+                    chat_room_id = self.chat_room_repository.create_chat_room(user_id, product_id_int)
+                else:
+                    chat_room_id = chat_room.get("id")
 
             # 2단계: 관련 리뷰 검색
             logger.info(f"[chat_with_reviews] 2단계: 리뷰 검색 시작 - query: '{user_question}', product_url: '{product_id}', n_results: {n_results}")
@@ -141,28 +145,31 @@ class AIService:
                 }
 
 
-            # 4단계: 최근 대화 30건 cache에서 조회, 없으면 db에서 조회 후 cache에 set
-            logger.info(f"[chat_with_reviews] 5단계: 최근 대화 캐시 조회 시작 - chat_room_id: '{chat_room_id}'")
-            recent_convs = conversation_cache.get_recent_conversations(chat_room_id)
-            logger.info(f"[chat_with_reviews] 5단계: 캐시에서 조회된 대화 수: {len(recent_convs) if recent_convs else 0}")
-            if not recent_convs:
-                logger.info(f"[chat_with_reviews] 6단계: DB에서 최근 대화 조회 시작")
-                recent_convs = await loop.run_in_executor(
-                    None,
-                    self.conversation_repository.get_recent_conversations,
-                    chat_room_id
-                )
-                logger.info(f"[chat_with_reviews] 6단계: DB에서 조회된 대화 수: {len(recent_convs) if recent_convs else 0}")
-                if recent_convs:
-                    conversation_cache.set_conversations(chat_room_id, recent_convs)
-                    logger.info(f"[chat_with_reviews] 6단계: 대화 캐시에 저장 완료")
+            # 4단계: 채팅방이 있을 때만 최근 대화 조회
+            recent_convs = []
+            if chat_room_id is not None:
+                logger.info(f"[chat_with_reviews] 5단계: 최근 대화 캐시 조회 시작 - chat_room_id: '{chat_room_id}'")
+                recent_convs = conversation_cache.get_recent_conversations(chat_room_id)
+                logger.info(f"[chat_with_reviews] 5단계: 캐시에서 조회된 대화 수: {len(recent_convs) if recent_convs else 0}")
+                if not recent_convs:
+                    logger.info(f"[chat_with_reviews] 6단계: DB에서 최근 대화 조회 시작")
+                    recent_convs = await loop.run_in_executor(
+                        None,
+                        self.conversation_repository.get_recent_conversations,
+                        chat_room_id
+                    )
+                    logger.info(f"[chat_with_reviews] 6단계: DB에서 조회된 대화 수: {len(recent_convs) if recent_convs else 0}")
+                    if recent_convs:
+                        conversation_cache.set_conversations(chat_room_id, recent_convs)
+                        logger.info(f"[chat_with_reviews] 6단계: 대화 캐시에 저장 완료")
             # 6.5단계: 상품 정보 조회 (통합 테이블에서)
             product_info = None
-            try:
-                product_info = self.product_repository.get_product_by_id(str(product_id))
-                logger.info(f"[chat_with_reviews] 상품 정보 조회 완료: {product_info.get('product_name') if product_info else '정보 없음'}")
-            except Exception as e:
-                logger.warning(f"[chat_with_reviews] 상품 정보 조회 실패: {e}")
+            if product_id:
+                try:
+                    product_info = self.product_repository.get_product_by_id(str(product_id))
+                    logger.info(f"[chat_with_reviews] 상품 정보 조회 완료: {product_info.get('product_name') if product_info else '정보 없음'}")
+                except Exception as e:
+                    logger.warning(f"[chat_with_reviews] 상품 정보 조회 실패: {e}")
             
             # 7단계: AI 응답 생성 (최근 대화 30건 + 상품 정보도 전달)
             logger.info(f"[chat_with_reviews] 7단계: AI 응답 생성 시작")
@@ -173,37 +180,38 @@ class AIService:
             )
             # 8단계: 관련 리뷰 ID 추출
             related_review_ids = [r["metadata"].get("review_id") for r in similar_reviews if r.get("metadata") and r["metadata"].get("review_id")]
-            # 9단계: cache에 add_conversation (비동기, Write-Behind) 및 DB 저장 (비동기)
-            user_msg = {
-                "message": user_question,
-                "chat_user_id": user_id,
-                "related_review_ids": related_review_ids
-            }
-            ai_msg = {
-                "message": ai_response,
-                "chat_user_id": "open_1234",
-                "related_review_ids": related_review_ids
-            }
+            # 9단계: 채팅방이 있을 때만 대화 저장
+            if chat_room_id is not None:
+                user_msg = {
+                    "message": user_question,
+                    "chat_user_id": user_id,
+                    "related_review_ids": related_review_ids
+                }
+                ai_msg = {
+                    "message": ai_response,
+                    "chat_user_id": "open_1234",
+                    "related_review_ids": related_review_ids
+                }
 
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, user_msg)
-            await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, ai_msg)
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, user_msg)
+                await loop.run_in_executor(None, conversation_cache.add_conversation, chat_room_id, ai_msg)
 
-            # 11단계: DB 저장 (chat_room_id 기준)
-            await self.store_chat(
-                user_id=user_id,
-                chat_room_id=chat_room_id,
-                message=user_question,
-                chat_user_id=user_id,
-                related_review_ids=related_review_ids
-            )
-            await self.store_chat(
-                user_id=user_id,
-                chat_room_id=chat_room_id,
-                message=ai_response,
-                chat_user_id="open_ai_v1",
-                related_review_ids=related_review_ids
-            )
+                # 11단계: DB 저장 (chat_room_id 기준)
+                await self.store_chat(
+                    user_id=user_id,
+                    chat_room_id=chat_room_id,
+                    message=user_question,
+                    chat_user_id=user_id,
+                    related_review_ids=related_review_ids
+                )
+                await self.store_chat(
+                    user_id=user_id,
+                    chat_room_id=chat_room_id,
+                    message=ai_response,
+                    chat_user_id="open_ai_v1",
+                    related_review_ids=related_review_ids
+                )
             final_response = {
                 "success": True,
                 "message": "AI 응답이 성공적으로 생성되었습니다.",

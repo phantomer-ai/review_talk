@@ -68,12 +68,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// 채팅 화면 표시
-  void _showChat({
-    required String productId,
-    required String productName,
-    String? productImage,
-    String? productPrice,
-  }) {
+  void _showChat(String productId, String? productName, String? productImage, String? productPrice) {
     setState(() {
       _showChatScreen = true;
       _chatProductId = productId;

@@ -15,7 +15,9 @@ import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// Figma 디자인을 참고한 메인 화면
 class UrlInputScreen extends StatefulWidget {
-  const UrlInputScreen({super.key});
+  final Function(String productId, String? productName, String? productImage, String? productPrice)? onChatRequested;
+  
+  const UrlInputScreen({super.key, this.onChatRequested});
 
   @override
   State<UrlInputScreen> createState() => _UrlInputScreenState();

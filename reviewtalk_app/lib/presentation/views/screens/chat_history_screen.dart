@@ -26,8 +26,9 @@ class ChatHistoryItem {
 /// 채팅 히스토리 화면 - 새로운 심플한 디자인
 class ChatHistoryScreen extends StatefulWidget {
   final VoidCallback? onUrlSelected;
+  final Function(String productId, String? productName, String? productImage, String? productPrice)? onChatRequested;
 
-  const ChatHistoryScreen({super.key, this.onUrlSelected});
+  const ChatHistoryScreen({super.key, this.onUrlSelected, this.onChatRequested});
 
   @override
   State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();

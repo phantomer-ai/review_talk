@@ -1,0 +1,107 @@
+INFO:     Will watch for changes in these directories: ['/Users/cheonjuho/App_developer/juho_alone/reviewtalk-backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [83525] using WatchFiles
+INFO:     Started server process [83527]
+INFO:     Waiting for application startup.
+2025-07-21 20:23:25.494 | INFO     | app.main:lifespan:40 - Starting ReviewTalk API...
+2025-07-21 20:23:25.494 | INFO     | app.database:init_database:107 - Database directory ensured at: .
+2025-07-21 20:23:25.494 | INFO     | app.database:init_database:111 - Database file not found. Creating new database at: reviewtalk.db
+2025-07-21 20:23:25.497 | INFO     | app.database:init_database:117 - Database tables created successfully
+2025-07-21 20:23:25.497 | INFO     | app.main:lifespan:45 - Database initialization completed
+INFO:     Application startup complete.
+INFO:     127.0.0.1:49685 - "GET /health HTTP/1.1" 200 OK
+2025-07-21 20:23:45.859 | INFO     | app.infrastructure.unified_product_repository:get_special_products_as_models:210 - ✅ 0개의 특가 상품을 조회했습니다
+INFO:     127.0.0.1:49714 - "GET /api/v1/special-deals?limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49878 - "OPTIONS /api/v1/account/guest HTTP/1.1" 200 OK
+2025-07-21 20:24:52.683 | INFO     | app.api.routes.account:create_guest_account:28 - 게스트 계정 생성: 02a63e51-1746-4954-9c16-de05c22cbb20
+INFO:     127.0.0.1:49878 - "POST /api/v1/account/guest HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49878 - "OPTIONS /api/v1/special-deals?limit=6&offset=0 HTTP/1.1" 200 OK
+2025-07-21 20:24:53.117 | INFO     | app.infrastructure.unified_product_repository:get_special_products_as_models:210 - ✅ 0개의 특가 상품을 조회했습니다
+INFO:     127.0.0.1:49880 - "GET /api/v1/special-deals?limit=6&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49880 - "OPTIONS /api/v1/products/special-deals/?limit=6&only_crawled=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49878 - "OPTIONS /api/v1/products?user_id=02a63e51-1746-4954-9c16-de05c22cbb20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49882 - "GET /api/v1/products?user_id=02a63e51-1746-4954-9c16-de05c22cbb20 HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:49882 - "OPTIONS /api/v1/products/?user_id=02a63e51-1746-4954-9c16-de05c22cbb20 HTTP/1.1" 200 OK
+2025-07-21 20:24:53.265 | INFO     | app.api.routes.products:get_user_products:127 - 사용자 02a63e51-1746-4954-9c16-de05c22cbb20의 상품 목록 조회 시작
+2025-07-21 20:24:53.269 | ERROR    | app.api.routes.products:get_user_products:157 - 사용자 상품 목록 조회 중 오류 발생: no such table: chat_room
+INFO:     127.0.0.1:49878 - "GET /api/v1/products/?user_id=02a63e51-1746-4954-9c16-de05c22cbb20 HTTP/1.1" 500 Internal Server Error
+2025-07-21 20:24:53.492 | DEBUG    | chromadb.config:start:337 - Starting component System
+2025-07-21 20:24:53.492 | DEBUG    | chromadb.config:start:337 - Starting component Posthog
+2025-07-21 20:24:53.492 | DEBUG    | chromadb.config:start:337 - Starting component OpenTelemetryClient
+2025-07-21 20:24:53.492 | DEBUG    | chromadb.config:start:337 - Starting component SqliteDB
+2025-07-21 20:24:53.496 | DEBUG    | chromadb.config:start:337 - Starting component SimpleQuotaEnforcer
+2025-07-21 20:24:53.496 | DEBUG    | chromadb.config:start:337 - Starting component SimpleRateLimitEnforcer
+2025-07-21 20:24:53.496 | DEBUG    | chromadb.config:start:337 - Starting component LocalSegmentManager
+2025-07-21 20:24:53.496 | DEBUG    | chromadb.config:start:337 - Starting component LocalExecutor
+2025-07-21 20:24:53.496 | DEBUG    | chromadb.config:start:337 - Starting component SegmentAPI
+2025-07-21 20:24:53.511 | INFO     | sentence_transformers.SentenceTransformer:__init__:211 - Use pytorch device_name: mps
+2025-07-21 20:24:53.511 | INFO     | sentence_transformers.SentenceTransformer:__init__:219 - Load pretrained SentenceTransformer: intfloat/multilingual-e5-small
+2025-07-21 20:24:53.590 | DEBUG    | urllib3.connectionpool:_new_conn:1049 - Starting new HTTPS connection (1): huggingface.co:443
+2025-07-21 20:24:53.828 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/modules.json HTTP/1.1" 307 0
+2025-07-21 20:24:53.847 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /api/resolve-cache/models/intfloat/multilingual-e5-small/c007d7ef6fd86656326059b28395a7a03a7c5846/modules.json HTTP/1.1" 200 0
+2025-07-21 20:24:54.059 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/config_sentence_transformers.json HTTP/1.1" 404 0
+2025-07-21 20:24:54.268 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/README.md HTTP/1.1" 307 0
+2025-07-21 20:24:54.286 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /api/resolve-cache/models/intfloat/multilingual-e5-small/c007d7ef6fd86656326059b28395a7a03a7c5846/README.md HTTP/1.1" 200 0
+2025-07-21 20:24:54.494 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/modules.json HTTP/1.1" 307 0
+2025-07-21 20:24:54.517 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /api/resolve-cache/models/intfloat/multilingual-e5-small/c007d7ef6fd86656326059b28395a7a03a7c5846/modules.json HTTP/1.1" 200 0
+2025-07-21 20:24:54.722 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/sentence_bert_config.json HTTP/1.1" 307 0
+2025-07-21 20:24:54.740 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /api/resolve-cache/models/intfloat/multilingual-e5-small/c007d7ef6fd86656326059b28395a7a03a7c5846/sentence_bert_config.json HTTP/1.1" 200 0
+2025-07-21 20:24:54.949 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/adapter_config.json HTTP/1.1" 404 0
+2025-07-21 20:24:55.150 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/config.json HTTP/1.1" 307 0
+2025-07-21 20:24:55.167 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /api/resolve-cache/models/intfloat/multilingual-e5-small/c007d7ef6fd86656326059b28395a7a03a7c5846/config.json HTTP/1.1" 200 0
+2025-07-21 20:24:55.940 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /intfloat/multilingual-e5-small/resolve/main/tokenizer_config.json HTTP/1.1" 307 0
+2025-07-21 20:24:55.959 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "HEAD /api/resolve-cache/models/intfloat/multilingual-e5-small/c007d7ef6fd86656326059b28395a7a03a7c5846/tokenizer_config.json HTTP/1.1" 200 0
+2025-07-21 20:24:56.172 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "GET /api/models/intfloat/multilingual-e5-small/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-07-21 20:24:57.361 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "GET /api/models/intfloat/multilingual-e5-small/revision/main HTTP/1.1" 200 1061388
+2025-07-21 20:24:57.907 | DEBUG    | urllib3.connectionpool:_make_request:544 - https://huggingface.co:443 "GET /api/models/intfloat/multilingual-e5-small HTTP/1.1" 200 1061388
+2025-07-21 20:24:59.065 | DEBUG    | chromadb.api.segment:create_collection:259 - Collection product_reviews already exists, returning existing collection.
+2025-07-21 20:24:59.067 | INFO     | app.infrastructure.unified_product_repository:get_special_products:162 - ✅ 0개의 특가 상품을 조회했습니다
+INFO:     127.0.0.1:49880 - "GET /api/v1/products/special-deals/?limit=6&only_crawled=true HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app/infrastructure/chat_room_repository.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2025-07-21 20:34:33.427 | INFO     | app.main:lifespan:53 - Shutting down ReviewTalk API...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [83527]
+INFO:     Started server process [86091]
+INFO:     Waiting for application startup.
+2025-07-21 20:34:36.439 | INFO     | app.main:lifespan:40 - Starting ReviewTalk API...
+2025-07-21 20:34:36.439 | INFO     | app.database:init_database:107 - Database directory ensured at: .
+2025-07-21 20:34:36.439 | INFO     | app.database:init_database:119 - Database file already exists at: reviewtalk.db
+2025-07-21 20:34:36.440 | INFO     | app.database:init_database:141 - All required tables exist
+2025-07-21 20:34:36.440 | INFO     | app.main:lifespan:45 - Database initialization completed
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/infrastructure/conversation_repository.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2025-07-21 20:34:50.791 | INFO     | app.main:lifespan:53 - Shutting down ReviewTalk API...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [86091]
+INFO:     Started server process [86156]
+INFO:     Waiting for application startup.
+2025-07-21 20:34:52.867 | INFO     | app.main:lifespan:40 - Starting ReviewTalk API...
+2025-07-21 20:34:52.867 | INFO     | app.database:init_database:107 - Database directory ensured at: .
+2025-07-21 20:34:52.867 | INFO     | app.database:init_database:119 - Database file already exists at: reviewtalk.db
+2025-07-21 20:34:52.867 | INFO     | app.database:init_database:141 - All required tables exist
+2025-07-21 20:34:52.867 | INFO     | app.main:lifespan:45 - Database initialization completed
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/infrastructure/conversation_room_repository.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2025-07-21 20:34:59.242 | INFO     | app.main:lifespan:53 - Shutting down ReviewTalk API...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [86156]
+INFO:     Started server process [86186]
+INFO:     Waiting for application startup.
+2025-07-21 20:35:01.368 | INFO     | app.main:lifespan:40 - Starting ReviewTalk API...
+2025-07-21 20:35:01.368 | INFO     | app.database:init_database:107 - Database directory ensured at: .
+2025-07-21 20:35:01.368 | INFO     | app.database:init_database:119 - Database file already exists at: reviewtalk.db
+2025-07-21 20:35:01.369 | INFO     | app.database:init_database:141 - All required tables exist
+2025-07-21 20:35:01.369 | INFO     | app.main:lifespan:45 - Database initialization completed
+INFO:     Application startup complete.
+2025-07-21 20:35:07.318 | INFO     | app.api.routes.products:get_user_products:127 - 사용자 test123의 상품 목록 조회 시작
+2025-07-21 20:35:07.319 | INFO     | app.api.routes.products:get_user_products:134 - 사용자 test123의 채팅방이 없습니다
+INFO:     127.0.0.1:50828 - "GET /api/v1/products/?user_id=test123 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50906 - "GET /health HTTP/1.1" 200 OK
+/Users/cheonjuho/.local/share/uv/python/cpython-3.11.8-macos-aarch64-none/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

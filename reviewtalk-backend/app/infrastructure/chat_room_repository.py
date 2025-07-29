@@ -1,12 +1,15 @@
 import sqlite3
 import os
 from typing import Optional, List, Dict, Any
+from pathlib import Path
+from app.core.config import settings
 
-DB_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    "data",
-    "reviewtalk.db"
-)
+def extract_sqlite_path(db_url: str) -> str:
+    if db_url.startswith("sqlite:///"):
+        return db_url.replace("sqlite:///", "")
+    raise ValueError("Only sqlite:/// URLs are supported")
+
+DB_PATH = Path(extract_sqlite_path(settings.database_url))
 
 class ChatRoomRepository:
     """chat_room 테이블 CRUD Repository"""

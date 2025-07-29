@@ -9,7 +9,7 @@ class ApiClient {
   ApiClient() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConstants.baseUrlSync,
+        baseUrl: ApiConstants.baseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {'Content-Type': 'application/json'},

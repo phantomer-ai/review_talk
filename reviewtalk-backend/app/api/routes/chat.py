@@ -33,13 +33,14 @@ async def chat_with_ai(
 ) -> Dict[str, Any]:
     """AI와 채팅하기 - 상품 리뷰 기반 질문 답변 (chat_room_id 기반 접근 지원)"""
     
-    # user_id 에 해당하는 product_id (chat_room) 이 생성 되어있는지 확인
-    room = chat_room_repo.get_chat_room_by_user_and_product(request.user_id,request.product_id)
-    
-    # 만약 room 이 없으면?
-    if room == None:
-        chat_room_repo.create_chat_room(request.user_id, request.product_id)
-    
+    # product_id가 있는 경우에만 chat_room 처리
+    if request.product_id:
+        # user_id 에 해당하는 product_id (chat_room) 이 생성 되어있는지 확인
+        room = chat_room_repo.get_chat_room_by_user_and_product(request.user_id, request.product_id)
+        
+        # 만약 room 이 없으면?
+        if room == None:
+            chat_room_repo.create_chat_room(request.user_id, request.product_id)
     
     # chat_with_reviews에 user_id, product_id 전달 (product_id는 room에서 추출)
     return await ai_service.chat_with_reviews(
