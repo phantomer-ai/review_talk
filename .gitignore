@@ -64,5 +64,22 @@ ehthumbs.db
 Thumbs.db 
 reviewtalk_app/ios/Runner.xcodeproj/project.pbxproj
 
-
+# Security - API Keys and Secrets
+*.env
+*.env.*
+**/env_template.txt
+**/env_template
+**/*secret*
+**/*key*
+**/*token*
+**/*password*
+**/config.py
 reviewtalk-backend/env_template.txt
+reviewtalk-backend/.env
+reviewtalk-backend/config.py
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+reviewtalk.db
