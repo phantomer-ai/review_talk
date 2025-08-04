@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../viewmodels/chat_viewmodel.dart';
 import '../widgets/chat_message_widget.dart';
 import '../widgets/chat_input_widget.dart';

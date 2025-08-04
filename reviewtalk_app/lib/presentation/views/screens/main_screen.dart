@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import 'url_input_screen.dart';
 import 'chat_history_screen.dart';
 import 'settings_screen.dart';
@@ -68,7 +67,12 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// 채팅 화면 표시
-  void _showChat(String productId, String? productName, String? productImage, String? productPrice) {
+  void _showChat(
+    String productId,
+    String? productName,
+    String? productImage,
+    String? productPrice,
+  ) {
     setState(() {
       _showChatScreen = true;
       _chatProductId = productId;

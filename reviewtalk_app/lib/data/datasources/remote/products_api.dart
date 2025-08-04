@@ -54,7 +54,7 @@ class ProductsApi {
       AppLogger.i('[ProductsApi] 특가 상품 조회 시작: limit=$limit, onlyCrawled=$onlyCrawled');
 
       final response = await _apiClient.get(
-        '/api/v1/products/special-deals/',
+        '/api/v1/special-deals',
         queryParameters: {
           'limit': limit,
           'only_crawled': onlyCrawled,

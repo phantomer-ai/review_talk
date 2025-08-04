@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../viewmodels/url_input_viewmodel.dart';
 
 /// 크롤링 진행 상태를 표시하는 로딩 화면 - Figma 스타일

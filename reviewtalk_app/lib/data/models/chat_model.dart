@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'review_model.dart';
 
 /// 채팅 응답의 소스 리뷰 모델 (서버 응답 전용)
 class SourceReviewModel extends Equatable {

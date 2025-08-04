@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/reviewtalk.db"
     
     # AI/LLM 설정
-    llm_provider: Literal["openai", "gemini", "qwen3", "local"] = "openai"  # Qwen3 추가
+    llm_provider: Literal["openai", "gemini", "qwen3", "local"] = "qwen3"  # Qwen3 추가
     
     # OpenAI API 설정
     openai_api_key: str = ""

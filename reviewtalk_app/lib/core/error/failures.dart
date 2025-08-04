@@ -14,8 +14,7 @@ abstract class Failure extends Equatable {
 class ServerFailure extends Failure {
   final int? statusCode;
 
-  const ServerFailure({required String message, this.statusCode})
-    : super(message: message);
+  const ServerFailure({required super.message, this.statusCode});
 
   @override
   List<Object> get props => [message, statusCode ?? 0];
@@ -23,25 +22,25 @@ class ServerFailure extends Failure {
 
 /// 네트워크 연결 실패
 class NetworkFailure extends Failure {
-  const NetworkFailure({required String message}) : super(message: message);
+  const NetworkFailure({required super.message});
 }
 
 /// 캐시 관련 실패
 class CacheFailure extends Failure {
-  const CacheFailure({required String message}) : super(message: message);
+  const CacheFailure({required super.message});
 }
 
 /// JSON 파싱 실패
 class JsonParsingFailure extends Failure {
-  const JsonParsingFailure({required String message}) : super(message: message);
+  const JsonParsingFailure({required super.message});
 }
 
 /// 타임아웃 실패
 class TimeoutFailure extends Failure {
-  const TimeoutFailure({required String message}) : super(message: message);
+  const TimeoutFailure({required super.message});
 }
 
 /// 일반적인 실패
 class GeneralFailure extends Failure {
-  const GeneralFailure({required String message}) : super(message: message);
+  const GeneralFailure({required super.message});
 }

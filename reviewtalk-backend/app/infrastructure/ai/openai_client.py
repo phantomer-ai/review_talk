@@ -133,6 +133,7 @@ class AIClient:
         
         # 시스템 프롬프트 설정
         system_prompt = """
+- 반드시 한국어로 답변해주세요.
 
 ## 역할
 -당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
@@ -192,9 +193,13 @@ class AIClient:
             document = review.get("document", "")
             review_texts.append(document)
         avg_rating = sum(ratings) / len(ratings) if ratings else 0
-        reviews_sample = "\n\n".join(review_texts[:10])  # 최대 10개 리뷰만 사용
-        logger.info(f"[generate_product_overview] 평균 평점: {avg_rating:.2f}, 샘플 리뷰 개수: {len(review_texts[:10])}")
+        reviews_sample = "
+
+".join(review_texts[:10])  # 최대 10개 리뷰만 사용
+        logger.info(f"[generate_product_overview] 평균 평점: {avg_rating:.2f}, 샘플 리뷰 개수: {len(review_texts[:10])})")
         system_prompt = """
+- 반드시 한국어로 답변해주세요.
+
 ## 역할
 -당신은 '리뷰톡'의 상품 리뷰 분석 전문 AI 챗봇입니다.
 

@@ -15,8 +15,14 @@ import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// Figma 디자인을 참고한 메인 화면
 class UrlInputScreen extends StatefulWidget {
-  final Function(String productId, String? productName, String? productImage, String? productPrice)? onChatRequested;
-  
+  final Function(
+    String productId,
+    String? productName,
+    String? productImage,
+    String? productPrice,
+  )?
+  onChatRequested;
+
   const UrlInputScreen({super.key, this.onChatRequested});
 
   @override
@@ -49,7 +55,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
 
   /// 대체 로고 위젯 생성
   Widget _buildFallbackLogo() {
-    return Container(
+    return SizedBox(
       height: 60,
       child: Center(
         child: Text(

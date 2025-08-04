@@ -100,7 +100,7 @@ CREATE TABLE conversations (
 
 
 def init_database():
-    """데이터베이스 초기화 함수"""
+    """데이터베이스 초기화 함수 (마이그레이션 포함)"""
     try:
         # data 디렉터리가 없으면 생성
         DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -118,27 +118,16 @@ def init_database():
         else:
             logger.info(f"Database file already exists at: {DB_PATH}")
             
-            # 기존 데이터베이스 검증 (테이블 존재 여부 확인)
-            with sqlite3.connect(DB_PATH) as conn:
-                cursor = conn.cursor()
-                
-                # 필요한 테이블들 확인
-                required_tables = ['users', 'products', 'chat_room', 'reviews', 'conversations']
-                cursor.execute("""
-                    SELECT name FROM sqlite_master 
-                    WHERE type='table' AND name IN ({})
-                """.format(','.join('?' * len(required_tables))), required_tables)
-                
-                existing_tables = [row[0] for row in cursor.fetchall()]
-                missing_tables = set(required_tables) - set(existing_tables)
-                
-                if missing_tables:
-                    logger.warning(f"Missing tables detected: {missing_tables}. Re-initializing database...")
-                    conn.executescript(CREATE_TABLES_SQL)
-                    conn.commit()
-                    logger.info("Database tables re-initialized successfully")
-                else:
-                    logger.info("All required tables exist")
+            # 🔄 마이그레이션 실행
+            from app.database_migration import migrate_database, verify_schema
+            
+            if not migrate_database():
+                logger.error("데이터베이스 마이그레이션 실패")
+                raise RuntimeError("Database migration failed")
+            
+            if not verify_schema():
+                logger.error("스키마 검증 실패")
+                raise RuntimeError("Schema verification failed")
                     
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")

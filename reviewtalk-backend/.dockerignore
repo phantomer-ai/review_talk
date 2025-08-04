@@ -1,0 +1,60 @@
+# Git 관련
+.git
+.gitignore
+*.md
+README.md
+
+# Python 관련
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache
+.coverage
+.tox
+
+# 가상환경
+.venv
+venv/
+env/
+
+# 환경설정 파일
+.env
+.env.*
+env_template.txt
+
+# 로그 파일
+*.log
+logs/
+backend_logs*.txt
+
+# 데이터베이스 파일 (로컬 개발용)
+*.db
+*.sqlite
+*.sqlite3
+data/
+reviewtalk*.db
+
+# 임시 파일
+temp_*
+check_*.py
+test_*.py
+
+# IDE 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+
+# 기타
+docs/
+tests/
+.python-version
+CLAUDE.md
+ERD.md 

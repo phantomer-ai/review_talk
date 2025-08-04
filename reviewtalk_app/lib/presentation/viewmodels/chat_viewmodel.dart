@@ -29,7 +29,7 @@ class ChatViewModel extends BaseViewModel {
   String? get productName => _productName;
 
   // 채팅 메시지 리스트
-  List<ChatMessage> _messages = [];
+  final List<ChatMessage> _messages = [];
   List<ChatMessage> get messages => List.unmodifiable(_messages);
 
   // 메시지 입력 상태
@@ -92,7 +92,7 @@ class ChatViewModel extends BaseViewModel {
       );
 
       final history = await _getChatHistory(params);
-      
+
       if (history.isNotEmpty) {
         _messages.addAll(history);
         // 채팅 기록이 있으면 상태 메시지 추가
@@ -220,12 +220,12 @@ class ChatViewModel extends BaseViewModel {
   /// 메시지 추가
   void _addMessage(ChatMessage message) {
     _messages.add(message);
-    
+
     // Repository 캐시에도 메시지 저장 (비동기이지만 UI 업데이트와 분리)
     _chatRepository.saveMessage(message).catchError((e) {
       AppLogger.e('[ChatViewModel] 메시지 캐시 저장 실패', e);
     });
-    
+
     notifyListeners();
   }
 

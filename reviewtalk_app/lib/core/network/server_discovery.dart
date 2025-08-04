@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
 

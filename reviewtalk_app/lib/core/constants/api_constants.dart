@@ -1,10 +1,30 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 /// API 관련 상수들
 class ApiConstants {
-  // Base URL (.env의 BASE_URL, 없으면 기본값)
-  static String get baseUrl =>
-      dotenv.env['BASE_URL'] ?? 'http://192.168.1.15:8000';
+  // Base URL (.env의 BASE_URL, 없으면 환경별 기본값)
+  static String get baseUrl {
+    // .env 파일에서 BASE_URL이 설정되어 있으면 우선 사용
+    final envBaseUrl = dotenv.env['BASE_URL'];
+    if (envBaseUrl != null && envBaseUrl.isNotEmpty) {
+      return envBaseUrl;
+    }
+
+    // 환경별 기본값 설정
+    if (kDebugMode) {
+      // 🛠️ 개발 모드 (로컬 개발)
+      if (kIsWeb) {
+        return 'http://localhost:8000'; // 웹 개발 시
+      } else {
+        return 'http://192.168.35.188:8000'; // 모바일 개발 시 (현재 로컬 IP)
+      }
+    } else {
+      // 🚀 배포 모드 (프로덕션)
+      return 'https://api.reviewtalk.com'; // 실제 배포 시 도메인
+      // 또는 'https://reviewtalk-api-xyz123.run.app' (Cloud Run URL)
+    }
+  }
 
   // API endpoints
   static const String crawlReviews = '/api/v1/crawl-reviews';
@@ -26,4 +46,13 @@ class ApiConstants {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  // 🔧 환경 확인용 (디버깅)
+  static String get currentEnvironment {
+    if (kDebugMode) {
+      return kIsWeb ? 'Development (Web)' : 'Development (Mobile)';
+    } else {
+      return 'Production';
+    }
+  }
 }

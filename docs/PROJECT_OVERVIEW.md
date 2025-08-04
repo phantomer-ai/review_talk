@@ -304,3 +304,49 @@ class CrawlRequest(BaseModel):
 ---
 
 **모든 엔드포인트는 user_id를 필수로 받으며, 응답은 success/에러 메시지/AI 답변/참조 리뷰 등 구조화되어 반환됩니다.**
+
+---
+
+## ChatRoom API 명세
+
+### 1. 채팅방 생성
+- **POST** `/api/v1/chat-rooms/`
+- body 예시:
+```json
+{
+  "user_id": "user1",
+  "product_id": 123
+}
+```
+- 응답 예시:
+```json
+{
+  "id": 1,
+  "user_id": "user1",
+  "product_id": 123,
+  "created_at": "2024-06-20T12:34:56"
+}
+```
+
+### 2. 사용자별 채팅방 목록 조회
+- **GET** `/api/v1/chat-rooms/?user_id=user1`
+- 응답 예시:
+```json
+{
+  "chat_rooms": [
+    {"id": 1, "user_id": "user1", "product_id": 123, "created_at": "..."},
+    {"id": 2, "user_id": "user1", "product_id": 456, "created_at": "..."}
+  ]
+}
+```
+
+### 3. 단일 채팅방 조회
+- **GET** `/api/v1/chat-rooms/{chat_room_id}`
+
+### 4. 채팅방 삭제
+- **DELETE** `/api/v1/chat-rooms/{chat_room_id}`
+
+### 활용 예시 및 정책
+- 한 사용자는 상품별로 1개의 chat_room만 생성 가능
+- 대화(conversations)는 반드시 chat_room_id를 통해 연결
+- user_id로 본인 채팅방 전체 조회 가능 (개인화)

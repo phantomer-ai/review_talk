@@ -128,7 +128,7 @@ class ChatMessageWidget extends StatelessWidget {
                 style: const TextStyle(fontSize: 11, color: Colors.black54),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/review_model.dart';
 import '../../domain/usecases/crawl_reviews.dart';
 import 'base_viewmodel.dart';
-import 'package:reviewtalk_app/core/utils/app_logger.dart';
 
 /// URL 입력 화면 ViewModel
 class UrlInputViewModel extends BaseViewModel {
