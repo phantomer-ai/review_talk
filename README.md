@@ -222,6 +222,6 @@ cp env.example.txt .env
 ---
 
 **개발자**: 천주호  
-**프로젝트 시작**: 2025-06-08  
+**프로젝트 시작**: 2025-01-08  
 **현재 상태**: 다중 LLM 지원 완료 ✅  
-**저장소**: [GitHub](https://github.com/ai-factory990/even_better) 
+**저장소**: [GitHub](https://github.com/phantomer-ai/review_talk)
