@@ -83,9 +83,7 @@ CREATE TABLE IF NOT EXISTS special_products (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS conversations;
-
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     chat_room_id INTEGER NOT NULL,
     message TEXT NOT NULL,
@@ -106,28 +104,16 @@ def init_database():
         DB_DIR.mkdir(parents=True, exist_ok=True)
         logger.info(f"Database directory ensured at: {DB_DIR}")
         
-        # 데이터베이스 파일 존재 여부 확인
-        if not DB_PATH.exists():
-            logger.info(f"Database file not found. Creating new database at: {DB_PATH}")
-            
-            # 데이터베이스 생성 및 테이블 초기화
-            with sqlite3.connect(DB_PATH) as conn:
-                conn.executescript(CREATE_TABLES_SQL)
-                conn.commit()
-                logger.info("Database tables created successfully")
-        else:
-            logger.info(f"Database file already exists at: {DB_PATH}")
-            
-            # 🔄 마이그레이션 실행
-            from app.database_migration import migrate_database, verify_schema
-            
-            if not migrate_database():
-                logger.error("데이터베이스 마이그레이션 실패")
-                raise RuntimeError("Database migration failed")
-            
-            if not verify_schema():
-                logger.error("스키마 검증 실패")
-                raise RuntimeError("Schema verification failed")
+        # 🔄 마이그레이션 실행
+        from app.database_migration import migrate_database, verify_schema
+        
+        if not migrate_database():
+            logger.error("데이터베이스 마이그레이션 실패")
+            raise RuntimeError("Database migration failed")
+        
+        if not verify_schema():
+            logger.error("스키마 검증 실패")
+            raise RuntimeError("Schema verification failed")
                     
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")

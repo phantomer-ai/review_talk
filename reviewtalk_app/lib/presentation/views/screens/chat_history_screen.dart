@@ -212,17 +212,28 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
       // 상품 데이터가 있는 경우 - 채팅 화면으로 이동
       final product = chatItem.product;
       if (product.canChat) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder:
-                (context) => ChatScreen(
-                  productId: product.productId,
-                  productName: product.name,
-                  productImage: product.imageUrl,
-                  productPrice: product.price,
-                ),
-          ),
-        );
+        // onChatRequested 콜백 사용하여 메인 화면의 채팅 오버레이 표시
+        if (widget.onChatRequested != null) {
+          widget.onChatRequested!(
+            product.productId,
+            product.name,
+            product.imageUrl,
+            product.price,
+          );
+        } else {
+          // 콜백이 없을 때만 Navigator 사용 (fallback)
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder:
+                  (context) => ChatScreen(
+                    productId: product.productId,
+                    productName: product.name,
+                    productImage: product.imageUrl,
+                    productPrice: product.price,
+                  ),
+            ),
+          );
+        }
       } else {
         // 리뷰 데이터가 준비되지 않은 경우
         ScaffoldMessenger.of(context).showSnackBar(

@@ -193,10 +193,8 @@ class AIClient:
             document = review.get("document", "")
             review_texts.append(document)
         avg_rating = sum(ratings) / len(ratings) if ratings else 0
-        reviews_sample = "
-
-".join(review_texts[:10])  # 최대 10개 리뷰만 사용
-        logger.info(f"[generate_product_overview] 평균 평점: {avg_rating:.2f}, 샘플 리뷰 개수: {len(review_texts[:10])})")
+        reviews_sample = "\n\n".join(review_texts[:10])  # 최대 10개 리뷰만 사용
+        logger.info(f"[generate_product_overview] 평균 평점: {avg_rating:.2f}, 샘플 리뷰 개수: {len(review_texts[:10])}")
         system_prompt = """
 - 반드시 한국어로 답변해주세요.
 
@@ -210,7 +208,6 @@ class AIClient:
   - "리뷰를 분석해보니…"
   - "구매하신 분들 의견을 보면…"
   - "대부분의 사용자들이…"
-- 이모지를 적절히 사용하세요: 😊 🙏 ⚠️ 💬 👍 💡
 ## 응답 구조
 1. **관련 리뷰 수 요약**
    - 예: "전체 1,500개의 리뷰 중 120명이 착용감에 대해 언급했어요."

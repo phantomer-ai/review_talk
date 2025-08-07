@@ -17,7 +17,7 @@ def extract_sqlite_path(db_url: str) -> str:
 DB_PATH = Path(extract_sqlite_path(settings.database_url))
 
 # 데이터베이스 스키마 버전 관리
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # 마이그레이션 스크립트들
 MIGRATIONS = {
@@ -55,6 +55,43 @@ MIGRATIONS = {
         "up": """
         -- 컬럼이 존재하지 않을 때만 추가
         ALTER TABLE products ADD COLUMN is_crawled BOOLEAN DEFAULT FALSE;
+        """
+    },
+    3: {
+        "description": "Add chat_room, reviews, and conversations tables",
+        "up": """
+        CREATE TABLE IF NOT EXISTS chat_room (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            product_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, product_id),
+            FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            review_id TEXT UNIQUE NOT NULL,
+            content TEXT NOT NULL,
+            rating INTEGER,
+            author TEXT,
+            date TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_room_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            chat_user_id TEXT NOT NULL,
+            related_review_ids TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (chat_room_id) REFERENCES chat_room(id) ON DELETE CASCADE,
+            FOREIGN KEY (chat_user_id) REFERENCES user(user_id) ON DELETE SET NULL
+        );
         """
     }
 }

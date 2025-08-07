@@ -50,13 +50,16 @@ class _LoadingScreenState extends State<LoadingScreen>
     super.dispose();
   }
 
+  bool _completeCalled = false; // 중복 호출 방지
+
   void _onViewModelChange() {
     if (!mounted) return;
 
     final viewModel = context.read<UrlInputViewModel>();
 
-    // 크롤링 완료시 콜백 호출
-    if (viewModel.crawlResult != null && !viewModel.isLoading) {
+    // 크롤링 완료시 콜백 호출 (한 번만)
+    if (viewModel.crawlResult != null && !viewModel.isLoading && !_completeCalled) {
+      _completeCalled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           widget.onComplete?.call();

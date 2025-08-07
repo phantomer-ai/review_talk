@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../data/models/special_product_model.dart';
 import '../../../data/datasources/remote/special_deals_api.dart';
 import '../../viewmodels/url_input_viewmodel.dart';
@@ -131,17 +132,28 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
   void _navigateToChat(UrlInputViewModel viewModel) {
     final result = viewModel.crawlResult!;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder:
-            (context) => ChatScreen(
-              productId: viewModel.productId ?? viewModel.currentUrl,
-              productName: result.productName,
-              productImage: result.productImage,
-              productPrice: result.productPrice,
-            ),
-      ),
-    );
+    // onChatRequested 콜백 사용하여 메인 화면의 채팅 오버레이 표시
+    if (widget.onChatRequested != null) {
+      widget.onChatRequested!(
+        viewModel.productId ?? viewModel.currentUrl,
+        result.productName,
+        result.productImage,
+        result.productPrice,
+      );
+    } else {
+      // 콜백이 없을 때만 Navigator 사용 (fallback)
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder:
+              (context) => ChatScreen(
+                productId: viewModel.productId ?? viewModel.currentUrl,
+                productName: result.productName,
+                productImage: result.productImage,
+                productPrice: result.productPrice,
+              ),
+        ),
+      );
+    }
   }
 
   /// 특가 상품 데이터 로드
@@ -190,17 +202,28 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder:
-            (context) => ChatScreen(
-              productId: product.productId,
-              productName: product.productName,
-              productImage: product.imageUrl,
-              productPrice: product.price,
-            ),
-      ),
-    );
+    // onChatRequested 콜백 사용하여 메인 화면의 채팅 오버레이 표시
+    if (widget.onChatRequested != null) {
+      widget.onChatRequested!(
+        product.productId,
+        product.productName,
+        product.imageUrl,
+        product.price,
+      );
+    } else {
+      // 콜백이 없을 때만 Navigator 사용 (fallback)
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder:
+              (context) => ChatScreen(
+                productId: product.productId,
+                productName: product.productName,
+                productImage: product.imageUrl,
+                productPrice: product.price,
+              ),
+        ),
+      );
+    }
   }
 
   /// 다나와 상품 페이지 열기
@@ -256,7 +279,12 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
         MaterialPageRoute(
           builder:
               (context) => LoadingScreen(
-                onComplete: () => _navigateToChat(viewModel),
+                onComplete: () {
+                  // 로딩 화면을 닫고 메인 화면으로 돌아가기
+                  Navigator.of(context).pop();
+                  // 크롤링 결과로 채팅 시작
+                  _navigateToChat(viewModel);
+                },
                 onCancel: () {
                   viewModel.resetCrawlState();
                   Navigator.of(context).pop();
@@ -567,7 +595,7 @@ class _UrlInputScreenState extends State<UrlInputScreen> {
                     product.imageUrl != null &&
                             product.imageUrl!.trim().isNotEmpty
                         ? Image.network(
-                          'http://192.168.35.68:8000/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
+                          '${ApiConstants.baseUrl}/api/v1/special-deals/image-proxy?url=${Uri.encodeComponent(product.imageUrl!)}',
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,

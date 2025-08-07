@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 class ApiConstants {
   // Base URL (.env의 BASE_URL, 없으면 환경별 기본값)
   static String get baseUrl {
-    // .env 파일에서 BASE_URL이 설정되어 있으면 우선 사용
+    // .env 파일에서 BASE_URL이 설정되어 있으면 우선 사용ㅇ
     final envBaseUrl = dotenv.env['BASE_URL'];
     if (envBaseUrl != null && envBaseUrl.isNotEmpty) {
       return envBaseUrl;
