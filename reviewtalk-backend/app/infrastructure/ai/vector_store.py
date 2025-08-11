@@ -10,6 +10,11 @@ from chromadb import EmbeddingFunction
 from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 from app.models.schemas import ReviewData
+from loguru import logger
+
+from urllib.parse import urlparse, parse_qs
+from typing import Optional
+from app.utils.url_utils import extract_product_id
 
 
 class CustomEmbeddingFunction(EmbeddingFunction):
@@ -63,7 +68,7 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"}
         )
     
-    def add_reviews(self, reviews: List[ReviewData], product_url: str) -> None:
+    def add_reviews(self, reviews: List[ReviewData], product_id: str, product_info: Dict[str, Any] = None) -> None:
         """리뷰 데이터를 벡터 저장소에 추가"""
         try:
             documents = []
@@ -76,17 +81,29 @@ class VectorStore:
                 
                 # None 값들을 적절한 기본값으로 변환
                 metadata = {
-                    "product_url": product_url or "unknown",
+                    "product_id" : product_id,
                     "rating": int(review.rating) if review.rating is not None else 0,
                     "date": review.date or "unknown",
                     "review_id": review.review_id or str(uuid.uuid4()),
                     "author": review.author or "anonymous"
                 }
                 
+                # 상품 정보가 있으면 메타데이터에 추가
+                if product_info:
+                    metadata.update({
+                        "product_name": product_info.get("product_name", "unknown"),
+                        "product_image": product_info.get("product_image", ""),
+                        "product_price": product_info.get("product_price", ""),
+                        "product_brand": product_info.get("product_brand", "")
+                    })
+
                 documents.append(document)
                 metadatas.append(metadata)
                 ids.append(f"review_{metadata['review_id']}")
-            
+
+            logger.info(f"metas : [{metadatas}]")
+
+
             # ChromaDB에 추가
             self.collection.add(
                 documents=documents,
@@ -94,25 +111,30 @@ class VectorStore:
                 ids=ids
             )
             
-            print(f"✅ {len(reviews)}개 리뷰가 벡터 저장소에 추가되었습니다.")
+            product_name = product_info.get("product_name", "상품") if product_info else "상품"
+            logger.info(f"✅ {product_name}의 {len(reviews)}개 리뷰가 벡터 저장소에 추가되었습니다.")
             
         except Exception as e:
-            print(f"❌ 벡터 저장소 추가 오류: {e}")
+            logger.error(f"❌ 벡터 저장소 추가 오류: {e}")
             raise
     
     def search_similar_reviews(
         self, 
-        query: str, 
-        n_results: int = 5,
-        product_url: Optional[str] = None
+        query: str,
+            n_results: int = 10,
+        product_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """유사한 리뷰 검색"""
         try:
+
+            product_id_int = int(product_id) if product_id is not None else None
+
             # 검색 필터 설정
             where_filter = {}
-            if product_url:
-                where_filter["product_url"] = product_url
+            if product_id:
+                where_filter["product_id"] = product_id_int
             
+            logger.info(f"✅ product_id : {product_id_int} ")
             # 벡터 검색 수행
             results = self.collection.query(
                 query_texts=[query],
@@ -134,7 +156,7 @@ class VectorStore:
             return search_results
             
         except Exception as e:
-            print(f"❌ 벡터 검색 오류: {e}")
+            logger.error(f"❌ 벡터 검색 오류: {e}")
             return []
     
     def get_collection_stats(self) -> Dict[str, Any]:
@@ -146,16 +168,16 @@ class VectorStore:
                 "collection_name": self.collection.name
             }
         except Exception as e:
-            print(f"❌ 통계 조회 오류: {e}")
+            logger.error(f"❌ 통계 조회 오류: {e}")
             return {"total_reviews": 0, "collection_name": "unknown"}
     
     def delete_collection(self) -> None:
         """컬렉션 삭제 (테스트용)"""
         try:
             self.client.delete_collection(name="product_reviews")
-            print("✅ 컬렉션이 삭제되었습니다.")
+            logger.info("✅ 컬렉션이 삭제되었습니다.")
         except Exception as e:
-            print(f"❌ 컬렉션 삭제 오류: {e}")
+            logger.error(f"❌ 컬렉션 삭제 오류: {e}")
 
 
 # 전역 벡터 저장소 인스턴스 - 지연 초기화

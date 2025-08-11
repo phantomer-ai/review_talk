@@ -8,7 +8,8 @@ plugins {
 android {
     namespace = "com.example.reviewtalk_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+//    ndkVersion = "27.0.12077973"
+    ndkVersion = "26.3.11579264"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
